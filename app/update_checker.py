@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Docker image update checker and container updater."""
 
-import base64
 import json
 import os
 import subprocess
@@ -13,6 +12,12 @@ import re
 class UpdateChecker:
     def __init__(self, config):
         self.config = config
+        self.debug_log = []
+
+    def _debug(self, msg):
+        print(msg)
+        if self.config.debug:
+            self.debug_log.append(msg)
 
     def get_running_containers(self):
         result = subprocess.run(
@@ -37,12 +42,16 @@ class UpdateChecker:
             name, image = line.split("|", 1)
             # Skip self
             if own_name and name == own_name:
+                self._debug(f"  Skipped (self): {name}")
                 continue
             # Skip images referenced by ID (no tag)
             if re.match(r'^[0-9a-f]{12,}$', image):
+                self._debug(f"  Skipped (image ID): {name} ({image})")
                 continue
             if name not in self.config.exclude_containers:
                 containers.append({"name": name, "image": image})
+            else:
+                self._debug(f"  Skipped (excluded): {name}")
         return containers
 
     def _parse_image(self, image):
@@ -75,16 +84,17 @@ class UpdateChecker:
         try:
             # Docker Hub
             if "docker.io" in registry:
-                # Try to use credentials from docker config
-                docker_config = os.path.expanduser("/.docker/config.json")
+                docker_config = os.environ.get("DOCKER_CONFIG", "/.docker")
+                config_file = os.path.join(docker_config, "config.json")
                 auth_header = None
-                if os.path.exists(docker_config):
-                    with open(docker_config) as f:
+                if os.path.exists(config_file):
+                    with open(config_file) as f:
                         cfg = json.load(f)
                     for key in cfg.get("auths", {}):
                         if "docker.io" in key:
                             auth_header = cfg["auths"][key].get("auth")
                             break
+                    self._debug(f"  Auth: {'credentials found' if auth_header else 'no credentials'}")
 
                 url = f"https://auth.docker.io/token?service=registry.docker.io&scope=repository:{repository}:pull"
                 req = urllib.request.Request(url)
@@ -100,7 +110,7 @@ class UpdateChecker:
                     return json.loads(resp.read()).get("token")
 
         except Exception as e:
-            print(f"Auth error for {registry}/{repository}: {e}")
+            self._debug(f"  Auth error: {e}")
         return None
 
     def _get_remote_digest(self, registry, repository, tag, token):
@@ -127,7 +137,7 @@ class UpdateChecker:
                 digest = resp.headers.get("Docker-Content-Digest", "")
                 return digest
         except Exception as e:
-            print(f"Registry error for {repository}:{tag}: {e}")
+            self._debug(f"  Registry error: {e}")
             return None
 
     def _get_local_digest(self, image):
@@ -140,38 +150,56 @@ class UpdateChecker:
             return result.stdout.strip().split("@")[1]
         return None
 
-    def check_all(self):
+    def check_all(self, bot=None):
+        self.debug_log = []
         containers = self.get_running_containers()
-        print(f"Checking {len(containers)} containers for updates...")
+        self._debug(f"Checking {len(containers)} containers for updates...")
         updates = []
 
         for c in containers:
             image = c["image"]
             registry, repository, tag = self._parse_image(image)
             if not registry:
+                self._debug(f"  Skipped (unparseable): {c['name']} ({image})")
                 continue
+
+            self._debug(f"  Checking: {c['name']} ({registry}/{repository}:{tag})")
 
             local_digest = self._get_local_digest(image)
             if not local_digest:
+                self._debug(f"  Skipped (no local digest): {c['name']}")
                 continue
 
             token = self._get_auth_token(registry, repository)
             remote_digest = self._get_remote_digest(registry, repository, tag, token)
 
+            self._debug(f"  Local:  {local_digest[:30]}...")
+            self._debug(f"  Remote: {(remote_digest or 'FAILED')[:30]}...")
+
             if remote_digest and local_digest != remote_digest:
-                print(f"  Update available: {c['name']} ({image})")
+                self._debug(f"  → UPDATE AVAILABLE")
                 updates.append(c)
             else:
-                print(f"  Up to date: {c['name']} ({image})")
+                self._debug(f"  → Up to date")
 
         # Save pending updates
         with open(self.config.pending_file, "w") as f:
             json.dump(updates, f)
-        print(f"Found {len(updates)} updates.")
+        self._debug(f"Found {len(updates)} updates.")
+
+        # Send debug log via Telegram
+        if self.config.debug and bot and self.debug_log:
+            log_text = "\n".join(self.debug_log)
+            # Split into chunks if too long
+            while log_text:
+                chunk = log_text[:3500]
+                log_text = log_text[3500:]
+                bot.send_message(f"```\n{chunk}\n```")
+
         return updates
 
     def update_container(self, name, image):
-        print(f"Updating: {name} ({image})...")
+        self._debug(f"Updating: {name} ({image})...")
 
         # Pull new image
         result = subprocess.run(
@@ -183,6 +211,8 @@ class UpdateChecker:
                 return False, "Rate limit erreicht. `docker login` auf dem Host ausführen und Credentials mounten."
             return False, f"Pull failed: {result.stderr[:200]}"
 
+        self._debug(f"  Pull OK: {name}")
+
         # Find compose project directory
         inspect = subprocess.run(
             ["docker", "inspect", name, "--format",
@@ -190,6 +220,7 @@ class UpdateChecker:
             capture_output=True, text=True
         )
         compose_dir = inspect.stdout.strip()
+        self._debug(f"  Compose dir: {compose_dir or 'none'}")
 
         if not compose_dir:
             return True, "Image pulled. No compose project found."
@@ -201,6 +232,7 @@ class UpdateChecker:
             capture_output=True, text=True
         )
         service_name = service.stdout.strip()
+        self._debug(f"  Service: {service_name or 'none'}")
 
         if not service_name:
             return True, "Image pulled. Service name not found."
@@ -214,13 +246,17 @@ class UpdateChecker:
                  "up", "-d", service_name],
                 capture_output=True, text=True, timeout=300
             )
+            self._debug(f"  Compose result: rc={result.returncode}")
             if result.returncode != 0:
+                self._debug(f"  Compose stderr: {result.stderr[:200]}")
                 # Fallback: try with compose_dir as cwd
                 result = subprocess.run(
                     ["docker", "compose", "up", "-d", service_name],
                     capture_output=True, text=True, cwd=compose_dir, timeout=300
                 )
+                self._debug(f"  Fallback result: rc={result.returncode}")
                 if result.returncode != 0:
+                    self._debug(f"  Fallback stderr: {result.stderr[:200]}")
                     return False, f"Compose error: {result.stderr[:200]}"
         except FileNotFoundError:
             return True, "Image pulled. Compose dir not accessible."

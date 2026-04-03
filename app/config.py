@@ -12,6 +12,7 @@ class Config:
         self.exclude_containers = exclude_containers
         self.data_dir = data_dir
         self.pending_file = os.path.join(data_dir, "pending_updates.json")
+        self.debug = False
 
     @classmethod
     def from_env(cls):

@@ -192,7 +192,7 @@ class TelegramBot:
 
         elif text == "/check":
             self.send_message("🔍 Prüfe auf Updates...")
-            updates = checker.check_all()
+            updates = checker.check_all(bot=self)
             if updates:
                 self.notify_updates(updates)
             else:
@@ -208,6 +208,11 @@ class TelegramBot:
                     return
             self.send_message("Keine ausstehenden Updates.")
 
+        elif text == "/debug":
+            self.config.debug = not self.config.debug
+            status = "AN 🔍" if self.config.debug else "AUS"
+            self.send_message(f"*Debug-Modus:* {status}")
+
         elif text == "/help" or text == "/start":
             self.send_message(
                 "*Docker Telegram Updater* 🐳\n\n"
@@ -215,5 +220,6 @@ class TelegramBot:
                 "/status — Container-Status anzeigen\n"
                 "/check — Jetzt auf Updates prüfen\n"
                 "/updates — Ausstehende Updates anzeigen\n"
+                "/debug — Debug-Modus ein/ausschalten\n"
                 "/help — Diese Hilfe"
             )
