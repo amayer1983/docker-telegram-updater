@@ -213,54 +213,115 @@ class UpdateChecker:
 
         self._debug(f"  Pull OK: {name}")
 
-        # Find compose project directory
-        inspect = subprocess.run(
-            ["docker", "inspect", name, "--format",
-             '{{index .Config.Labels "com.docker.compose.project.working_dir"}}'],
-            capture_output=True, text=True
-        )
-        compose_dir = inspect.stdout.strip()
-        self._debug(f"  Compose dir: {compose_dir or 'none'}")
-
-        if not compose_dir:
-            return True, "Image pulled. No compose project found."
-
-        # Get service name
-        service = subprocess.run(
-            ["docker", "inspect", name, "--format",
-             '{{index .Config.Labels "com.docker.compose.service"}}'],
-            capture_output=True, text=True
-        )
-        service_name = service.stdout.strip()
-        self._debug(f"  Service: {service_name or 'none'}")
-
-        if not service_name:
-            return True, "Image pulled. Service name not found."
-
-        # Restart via docker compose
+        # Recreate container: stop, rename old, create new with same config, start, remove old
         try:
-            result = subprocess.run(
-                ["docker", "compose", "-p",
-                 name.rsplit("-", 1)[0] if "-" in name else name,
-                 "-f", os.path.join(compose_dir, "docker-compose.yml"),
-                 "up", "-d", service_name],
-                capture_output=True, text=True, timeout=300
+            # Get full container config for recreation
+            inspect_raw = subprocess.run(
+                ["docker", "inspect", name],
+                capture_output=True, text=True
             )
-            self._debug(f"  Compose result: rc={result.returncode}")
-            if result.returncode != 0:
-                self._debug(f"  Compose stderr: {result.stderr[:200]}")
-                # Fallback: try with compose_dir as cwd
-                result = subprocess.run(
-                    ["docker", "compose", "up", "-d", service_name],
-                    capture_output=True, text=True, cwd=compose_dir, timeout=300
-                )
-                self._debug(f"  Fallback result: rc={result.returncode}")
-                if result.returncode != 0:
-                    self._debug(f"  Fallback stderr: {result.stderr[:200]}")
-                    return False, f"Compose error: {result.stderr[:200]}"
-        except FileNotFoundError:
-            return True, "Image pulled. Compose dir not accessible."
-        except Exception as e:
-            return False, f"Error: {str(e)[:200]}"
+            if inspect_raw.returncode != 0:
+                return True, "Image pulled. Container inspect failed."
 
-        return True, "OK"
+            config = json.loads(inspect_raw.stdout)[0]
+            self._debug(f"  Recreating container: {name}")
+
+            # Stop container
+            subprocess.run(["docker", "stop", name], capture_output=True, timeout=60)
+            self._debug(f"  Stopped: {name}")
+
+            # Rename old container
+            old_name = f"{name}_old"
+            subprocess.run(["docker", "rename", name, old_name], capture_output=True, timeout=10)
+            self._debug(f"  Renamed to: {old_name}")
+
+            # Build docker run command from inspect config
+            cmd = ["docker", "run", "-d", "--name", name]
+
+            # Restart policy
+            restart = config.get("HostConfig", {}).get("RestartPolicy", {})
+            if restart.get("Name"):
+                policy = restart["Name"]
+                if restart.get("MaximumRetryCount", 0) > 0:
+                    policy += f":{restart['MaximumRetryCount']}"
+                cmd.extend(["--restart", policy])
+
+            # Network mode
+            network_mode = config.get("HostConfig", {}).get("NetworkMode", "")
+            if network_mode and network_mode != "default":
+                cmd.extend(["--network", network_mode])
+
+            # Environment variables
+            for env in config.get("Config", {}).get("Env", []):
+                cmd.extend(["-e", env])
+
+            # Volumes/Mounts
+            for mount in config.get("Mounts", []):
+                if mount["Type"] == "bind":
+                    bind = f"{mount['Source']}:{mount['Destination']}"
+                    if not mount.get("RW", True):
+                        bind += ":ro"
+                    cmd.extend(["-v", bind])
+                elif mount["Type"] == "volume":
+                    bind = f"{mount['Name']}:{mount['Destination']}"
+                    if not mount.get("RW", True):
+                        bind += ":ro"
+                    cmd.extend(["-v", bind])
+
+            # Port mappings
+            ports = config.get("HostConfig", {}).get("PortBindings", {}) or {}
+            for container_port, bindings in ports.items():
+                if bindings:
+                    for b in bindings:
+                        host_ip = b.get("HostIp", "")
+                        host_port = b.get("HostPort", "")
+                        if host_ip:
+                            cmd.extend(["-p", f"{host_ip}:{host_port}:{container_port}"])
+                        else:
+                            cmd.extend(["-p", f"{host_port}:{container_port}"])
+
+            # Labels (preserve all)
+            for key, value in config.get("Config", {}).get("Labels", {}).items():
+                cmd.extend(["--label", f"{key}={value}"])
+
+            # Hostname
+            hostname = config.get("Config", {}).get("Hostname", "")
+            if hostname and hostname != config.get("Id", "")[:12]:
+                cmd.extend(["--hostname", hostname])
+
+            # Security options
+            for opt in config.get("HostConfig", {}).get("SecurityOpt", []) or []:
+                cmd.extend(["--security-opt", opt])
+
+            # Image
+            cmd.append(image)
+
+            # Original command (if not entrypoint-only)
+            original_cmd = config.get("Config", {}).get("Cmd")
+            if original_cmd:
+                cmd.extend(original_cmd)
+
+            self._debug(f"  Run cmd: docker run -d --name {name} ... {image}")
+
+            # Create and start new container
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+
+            if result.returncode != 0:
+                self._debug(f"  Run failed: {result.stderr[:300]}")
+                # Rollback: restore old container
+                subprocess.run(["docker", "rename", old_name, name], capture_output=True, timeout=10)
+                subprocess.run(["docker", "start", name], capture_output=True, timeout=60)
+                return False, f"Recreate failed: {result.stderr[:200]}"
+
+            # Remove old container
+            subprocess.run(["docker", "rm", old_name], capture_output=True, timeout=30)
+            self._debug(f"  Recreated successfully: {name}")
+
+            return True, "OK"
+
+        except Exception as e:
+            self._debug(f"  Error: {str(e)[:200]}")
+            # Try to restore on any failure
+            subprocess.run(["docker", "rename", f"{name}_old", name], capture_output=True, timeout=10)
+            subprocess.run(["docker", "start", name], capture_output=True, timeout=60)
+            return False, f"Error: {str(e)[:200]}"
