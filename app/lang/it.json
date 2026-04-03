@@ -71,5 +71,14 @@
   "web_excluded": "🚫 Contenitori esclusi",
   "web_save": "💾 Salva",
   "web_saved": "✅ Impostazioni salvate!",
-  "web_info": "ℹ️ Info"
+  "web_info": "ℹ️ Info",
+  "history_title": "📋 Cronologia aggiornamenti (ultimi 10)",
+  "history_empty": "📋 Nessun aggiornamento registrato.",
+  "help_history": "/history — Mostra cronologia",
+  "web_nav_history": "Cronologia",
+  "web_history": "Cronologia aggiornamenti",
+  "web_history_empty": "Nessun aggiornamento registrato.",
+  "web_date": "Data",
+  "web_result": "Risultato",
+  "web_detail": "Dettaglio"
 }

@@ -108,6 +108,7 @@ volumes:
 | `/check` | Manually trigger an update check |
 | `/updates` | Show pending updates |
 | `/cleanup` | Remove old unused Docker images |
+| `/history` | Show update history (last 10 entries) |
 | `/selfupdate` | Update the bot itself to the latest version |
 | `/debug` | Toggle debug mode for detailed diagnostics |
 | `/lang` | Switch language (e.g. `/lang en`, `/lang de`) |

@@ -71,5 +71,14 @@
   "web_excluded": "🚫 Wykluczone kontenery",
   "web_save": "💾 Zapisz",
   "web_saved": "✅ Ustawienia zapisane!",
-  "web_info": "ℹ️ Info"
+  "web_info": "ℹ️ Info",
+  "history_title": "📋 Historia aktualizacji (ostatnie 10)",
+  "history_empty": "📋 Brak zarejestrowanych aktualizacji.",
+  "help_history": "/history — Pokaż historię",
+  "web_nav_history": "Historia",
+  "web_history": "Historia aktualizacji",
+  "web_history_empty": "Brak zarejestrowanych aktualizacji.",
+  "web_date": "Data",
+  "web_result": "Wynik",
+  "web_detail": "Szczegóły"
 }

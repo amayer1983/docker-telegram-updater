@@ -71,5 +71,14 @@
   "web_excluded": "🚫 Исключённые контейнеры",
   "web_save": "💾 Сохранить",
   "web_saved": "✅ Настройки сохранены!",
-  "web_info": "ℹ️ Информация"
+  "web_info": "ℹ️ Информация",
+  "history_title": "📋 История обновлений (последние 10)",
+  "history_empty": "📋 Обновлений пока нет.",
+  "help_history": "/history — Показать историю",
+  "web_nav_history": "История",
+  "web_history": "История обновлений",
+  "web_history_empty": "Обновлений пока нет.",
+  "web_date": "Дата",
+  "web_result": "Результат",
+  "web_detail": "Детали"
 }

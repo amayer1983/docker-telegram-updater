@@ -7,6 +7,7 @@ import subprocess
 import urllib.request
 import urllib.parse
 import re
+from datetime import datetime
 
 
 class UpdateChecker:
@@ -180,6 +181,28 @@ class UpdateChecker:
             return created
         return "?"
 
+    def _save_history(self, name, image, success, detail=""):
+        """Append an entry to the update history file."""
+        entry = {
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "container": name,
+            "image": image,
+            "success": success,
+            "detail": detail,
+        }
+        history = []
+        if os.path.exists(self.config.history_file):
+            try:
+                with open(self.config.history_file) as f:
+                    history = json.load(f)
+            except (json.JSONDecodeError, IOError):
+                pass
+        history.append(entry)
+        # Keep last 100 entries
+        history = history[-100:]
+        with open(self.config.history_file, "w") as f:
+            json.dump(history, f, indent=2)
+
     def check_all(self, bot=None):
         self.debug_log = []
         containers = self.get_running_containers()
@@ -251,8 +274,12 @@ class UpdateChecker:
         )
         if result.returncode != 0:
             if "toomanyrequests" in result.stderr:
-                return False, "Rate limit erreicht. `docker login` auf dem Host ausführen und Credentials mounten."
-            return False, f"Pull failed: {result.stderr[:200]}"
+                msg = "Rate limit erreicht"
+                self._save_history(name, image, False, msg)
+                return False, f"{msg}. `docker login` auf dem Host ausführen und Credentials mounten."
+            msg = f"Pull failed: {result.stderr[:200]}"
+            self._save_history(name, image, False, msg)
+            return False, msg
 
         # Get new image info after pull
         new_created = "?"
@@ -376,17 +403,22 @@ class UpdateChecker:
                 # Rollback: restore old container
                 subprocess.run(["docker", "rename", old_name, name], capture_output=True, timeout=10)
                 subprocess.run(["docker", "start", name], capture_output=True, timeout=60)
-                return False, f"Recreate failed: {result.stderr[:200]}"
+                msg = f"Recreate failed: {result.stderr[:200]}"
+                self._save_history(name, image, False, msg)
+                return False, msg
 
             # Remove old container
             subprocess.run(["docker", "rm", old_name], capture_output=True, timeout=30)
             self._debug(f"  Recreated successfully: {name}")
 
-            return True, f"OK (📅 {old_created} → {new_created}, 📦 {new_size})"
+            detail = f"📅 {old_created} → {new_created}, 📦 {new_size}"
+            self._save_history(name, image, True, detail)
+            return True, f"OK ({detail})"
 
         except Exception as e:
             self._debug(f"  Error: {str(e)[:200]}")
             # Try to restore on any failure
             subprocess.run(["docker", "rename", f"{name}_old", name], capture_output=True, timeout=10)
             subprocess.run(["docker", "start", name], capture_output=True, timeout=60)
+            self._save_history(name, image, False, str(e)[:200])
             return False, f"Error: {str(e)[:200]}"

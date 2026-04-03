@@ -71,5 +71,14 @@
   "web_excluded": "🚫 제외된 컨테이너",
   "web_save": "💾 저장",
   "web_saved": "✅ 설정이 저장되었습니다!",
-  "web_info": "ℹ️ 정보"
+  "web_info": "ℹ️ 정보",
+  "history_title": "📋 업데이트 기록 (최근 10건)",
+  "history_empty": "📋 아직 업데이트 기록이 없습니다.",
+  "help_history": "/history — 기록 보기",
+  "web_nav_history": "기록",
+  "web_history": "업데이트 기록",
+  "web_history_empty": "아직 업데이트 기록이 없습니다.",
+  "web_date": "날짜",
+  "web_result": "결과",
+  "web_detail": "상세"
 }

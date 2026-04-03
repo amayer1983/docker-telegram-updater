@@ -71,5 +71,14 @@
   "web_excluded": "🚫 除外コンテナ",
   "web_save": "💾 保存",
   "web_saved": "✅ 設定を保存しました！",
-  "web_info": "ℹ️ 情報"
+  "web_info": "ℹ️ 情報",
+  "history_title": "📋 更新履歴（直近10件）",
+  "history_empty": "📋 まだ更新記録がありません。",
+  "help_history": "/history — 更新履歴を表示",
+  "web_nav_history": "履歴",
+  "web_history": "更新履歴",
+  "web_history_empty": "まだ更新記録がありません。",
+  "web_date": "日付",
+  "web_result": "結果",
+  "web_detail": "詳細"
 }

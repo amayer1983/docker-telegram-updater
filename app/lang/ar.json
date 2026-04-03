@@ -71,5 +71,14 @@
   "web_excluded": "🚫 حاويات مستبعدة",
   "web_save": "💾 حفظ",
   "web_saved": "✅ تم حفظ الإعدادات!",
-  "web_info": "ℹ️ معلومات"
+  "web_info": "ℹ️ معلومات",
+  "history_title": "📋 سجل التحديثات (آخر 10)",
+  "history_empty": "📋 لا توجد تحديثات مسجلة.",
+  "help_history": "/history — عرض السجل",
+  "web_nav_history": "السجل",
+  "web_history": "سجل التحديثات",
+  "web_history_empty": "لا توجد تحديثات مسجلة.",
+  "web_date": "التاريخ",
+  "web_result": "النتيجة",
+  "web_detail": "التفاصيل"
 }

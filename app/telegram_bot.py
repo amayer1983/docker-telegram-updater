@@ -527,6 +527,20 @@ class TelegramBot:
             else:
                 self.send_message(self.t("lang_usage") + f"\n\n📂 {', '.join(langs)}")
 
+        elif text == "/history":
+            if os.path.exists(self.config.history_file):
+                with open(self.config.history_file) as f:
+                    history = json.load(f)
+                if history:
+                    # Show last 10 entries, newest first
+                    lines = []
+                    for h in reversed(history[-10:]):
+                        icon = "✅" if h["success"] else "❌"
+                        lines.append(f"{icon} `{h['container']}` — {h['timestamp']}\n    {h.get('detail', '')}")
+                    self.send_message(self.t("history_title") + "\n\n" + "\n".join(lines))
+                    return
+            self.send_message(self.t("history_empty"))
+
         elif text == "/settings":
             debug_status = self.t("debug_on") if self.config.debug else self.t("debug_off")
             auto_su = "ON ✅" if self.config.auto_selfupdate else "OFF"
@@ -547,6 +561,7 @@ class TelegramBot:
                 + self.t("help_check") + "\n"
                 + self.t("help_updates") + "\n"
                 + self.t("help_cleanup") + "\n"
+                + self.t("help_history") + "\n"
                 + self.t("help_selfupdate") + "\n"
                 + self.t("help_debug") + "\n"
                 + self.t("help_lang") + "\n"

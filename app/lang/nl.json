@@ -71,5 +71,14 @@
   "web_excluded": "🚫 Uitgesloten containers",
   "web_save": "💾 Opslaan",
   "web_saved": "✅ Instellingen opgeslagen!",
-  "web_info": "ℹ️ Info"
+  "web_info": "ℹ️ Info",
+  "history_title": "📋 Updategeschiedenis (laatste 10)",
+  "history_empty": "📋 Nog geen updates geregistreerd.",
+  "help_history": "/history — Toon geschiedenis",
+  "web_nav_history": "Geschiedenis",
+  "web_history": "Updategeschiedenis",
+  "web_history_empty": "Nog geen updates geregistreerd.",
+  "web_date": "Datum",
+  "web_result": "Resultaat",
+  "web_detail": "Detail"
 }

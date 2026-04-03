@@ -71,5 +71,14 @@
   "web_excluded": "🚫 Hariç tutulan",
   "web_save": "💾 Kaydet",
   "web_saved": "✅ Ayarlar kaydedildi!",
-  "web_info": "ℹ️ Bilgi"
+  "web_info": "ℹ️ Bilgi",
+  "history_title": "📋 Güncelleme geçmişi (son 10)",
+  "history_empty": "📋 Henüz güncelleme kaydı yok.",
+  "help_history": "/history — Geçmişi göster",
+  "web_nav_history": "Geçmiş",
+  "web_history": "Güncelleme geçmişi",
+  "web_history_empty": "Henüz güncelleme kaydı yok.",
+  "web_date": "Tarih",
+  "web_result": "Sonuç",
+  "web_detail": "Detay"
 }

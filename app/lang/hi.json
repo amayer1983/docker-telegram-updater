@@ -71,5 +71,14 @@
   "web_excluded": "🚫 बहिष्कृत कंटेनर",
   "web_save": "💾 सहेजें",
   "web_saved": "✅ सेटिंग्स सहेजी गईं!",
-  "web_info": "ℹ️ जानकारी"
+  "web_info": "ℹ️ जानकारी",
+  "history_title": "📋 अपडेट इतिहास (अंतिम 10)",
+  "history_empty": "📋 अभी तक कोई अपडेट दर्ज नहीं।",
+  "help_history": "/history — इतिहास दिखाएं",
+  "web_nav_history": "इतिहास",
+  "web_history": "अपडेट इतिहास",
+  "web_history_empty": "अभी तक कोई अपडेट दर्ज नहीं।",
+  "web_date": "तारीख",
+  "web_result": "परिणाम",
+  "web_detail": "विवरण"
 }

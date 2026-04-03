@@ -71,5 +71,14 @@
   "web_excluded": "🚫 排除的容器",
   "web_save": "💾 保存",
   "web_saved": "✅ 设置已保存！",
-  "web_info": "ℹ️ 信息"
+  "web_info": "ℹ️ 信息",
+  "history_title": "📋 更新历史（最近10条）",
+  "history_empty": "📋 暂无更新记录。",
+  "help_history": "/history — 查看更新历史",
+  "web_nav_history": "历史",
+  "web_history": "更新历史",
+  "web_history_empty": "暂无更新记录。",
+  "web_date": "日期",
+  "web_result": "结果",
+  "web_detail": "详情"
 }

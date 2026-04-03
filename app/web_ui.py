@@ -88,6 +88,7 @@ def create_handler(config, checker, bot, password=None):
 
             nav_items = [
                 ("status", f'📊 {t("web_nav_status")}', "/"),
+                ("history", f'📋 {t("web_nav_history")}', "/history"),
                 ("settings", f'⚙️ {t("web_nav_settings")}', "/settings"),
             ]
             nav_html = ""
@@ -160,6 +161,8 @@ select {{ cursor: pointer; }}
             path = self._get_path()
             if path == "/" or path == "/status":
                 self._page_status()
+            elif path == "/history":
+                self._page_history()
             elif path == "/settings":
                 self._page_settings()
             elif path == "/api/check":
@@ -239,7 +242,7 @@ select {{ cursor: pointer; }}
 <h2>🐳 {t("web_containers")}</h2>
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
 <span style="font-size:12px;color:#8b949e">{t("web_containers_running", count=len(containers))}</span>
-<a href="/api/check" class="btn btn-blue" style="text-decoration:none;font-size:13px">🔍 {t("web_check_updates")}</a>
+<a href="/api/check" class="btn btn-blue" style="text-decoration:none;font-size:13px">{t("web_check_updates")}</a>
 </div>
 <table>
 <tr><th>{t("web_name")}</th><th>{t("web_image")}</th><th>{t("web_status")}</th></tr>
@@ -249,12 +252,50 @@ select {{ cursor: pointer; }}
 
             self._send_html(self._render_page(content, "status"))
 
+        def _page_history(self):
+            from i18n import get_translator
+            t = get_translator(config.language)
+
+            history = []
+            if os.path.exists(config.history_file):
+                try:
+                    with open(config.history_file) as f:
+                        history = json.load(f)
+                except (json.JSONDecodeError, IOError):
+                    pass
+
+            if not history:
+                content = f"""<div class="card">
+<h2>📋 {t("web_history")}</h2>
+<p style="color:#8b949e">{t("web_history_empty")}</p>
+</div>"""
+            else:
+                rows = ""
+                for h in reversed(history):
+                    icon = '<span class="badge badge-green">✅</span>' if h["success"] else '<span class="badge badge-yellow">❌</span>'
+                    rows += f"""<tr>
+<td>{h['timestamp']}</td>
+<td>{h['container']}</td>
+<td>{icon}</td>
+<td style="font-size:12px">{h.get('detail', '')}</td>
+</tr>"""
+
+                content = f"""<div class="card">
+<h2>📋 {t("web_history")}</h2>
+<table>
+<tr><th>{t("web_date")}</th><th>{t("web_name")}</th><th>{t("web_result")}</th><th>{t("web_detail")}</th></tr>
+{rows}
+</table>
+</div>"""
+
+            self._send_html(self._render_page(content, "history"))
+
         def _page_settings(self):
             from i18n import available_languages, get_translator
             t = get_translator(config.language)
 
             saved = "?saved=1" in self.path
-            saved_html = f'<div style="background:#1a3a2a;color:#3fb950;padding:10px;border-radius:6px;margin-bottom:16px">✅ {t("web_saved")}</div>' if saved else ""
+            saved_html = f'<div style="background:#1a3a2a;color:#3fb950;padding:10px;border-radius:6px;margin-bottom:16px">{t("web_saved")}</div>' if saved else ""
 
             langs = available_languages()
             lang_names = {"en": "English", "de": "Deutsch", "fr": "Français", "es": "Español", "it": "Italiano", "nl": "Nederlands", "pt": "Português", "pl": "Polski", "tr": "Türkçe", "ru": "Русский", "uk": "Українська", "ar": "العربية", "hi": "हिन्दी", "ja": "日本語", "ko": "한국어", "zh": "中文"}
@@ -270,45 +311,45 @@ select {{ cursor: pointer; }}
             content = f"""
 {saved_html}
 <div class="card">
-<h2>⚙️ {t("web_settings")}</h2>
+<h2>{t("web_nav_settings")}</h2>
 <form method="POST" action="/settings">
 
 <div class="grid">
 <div>
-<label>🌍 Language</label>
+<label>{t("web_language")}</label>
 <select name="language">
 {lang_options}
 </select>
 </div>
 <div>
-<label>🗓 Cron Schedule</label>
+<label>{t("web_cron_schedule")}</label>
 <input type="text" value="{config.cron_schedule}" disabled title="Change via CRON_SCHEDULE env var">
 </div>
 </div>
 
 <div class="grid">
 <div>
-<label><input type="checkbox" name="debug" {debug_checked} style="width:auto;margin-right:8px"> 🔍 {t("web_debug_mode")}</label>
+<label><input type="checkbox" name="debug" {debug_checked} style="width:auto;margin-right:8px"> {t("web_debug_mode")}</label>
 </div>
 <div>
-<label><input type="checkbox" name="auto_selfupdate" {auto_su_checked} style="width:auto;margin-right:8px"> 🔄 {t("web_auto_selfupdate")}</label>
+<label><input type="checkbox" name="auto_selfupdate" {auto_su_checked} style="width:auto;margin-right:8px"> {t("web_auto_selfupdate")}</label>
 </div>
 </div>
 
 <div style="margin-top:8px">
-<label>🚫 {t("web_excluded")}</label>
+<label>{t("web_excluded")}</label>
 <input type="text" value="{', '.join(config.exclude_containers)}" disabled title="Change via EXCLUDE_CONTAINERS env var">
 </div>
 
 <div style="margin-top:16px">
-<button type="submit" class="btn">💾 {t("web_save")}</button>
+<button type="submit" class="btn">{t("web_save")}</button>
 </div>
 
 </form>
 </div>
 
 <div class="card">
-<h2>ℹ️ {t("web_info")}</h2>
+<h2>{t("web_info")}</h2>
 <table>
 <tr><td>Bot Token</td><td><code>{config.bot_token[:8]}...{config.bot_token[-4:]}</code></td></tr>
 <tr><td>Chat ID</td><td><code>{config.chat_id}</code></td></tr>

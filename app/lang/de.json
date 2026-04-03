@@ -71,5 +71,14 @@
   "web_excluded": "🚫 Ausgeschlossene Container",
   "web_save": "💾 Speichern",
   "web_saved": "✅ Einstellungen gespeichert!",
-  "web_info": "ℹ️ Info"
+  "web_info": "ℹ️ Info",
+  "history_title": "📋 Update-Verlauf (letzte 10)",
+  "history_empty": "📋 Noch keine Updates aufgezeichnet.",
+  "help_history": "/history — Update-Verlauf anzeigen",
+  "web_nav_history": "Verlauf",
+  "web_history": "Update-Verlauf",
+  "web_history_empty": "Noch keine Updates aufgezeichnet.",
+  "web_date": "Datum",
+  "web_result": "Ergebnis",
+  "web_detail": "Detail"
 }
