@@ -87,7 +87,7 @@ class UpdateChecker:
                 docker_config = os.environ.get("DOCKER_CONFIG", "/.docker")
                 config_file = os.path.join(docker_config, "config.json")
                 auth_header = None
-                if os.path.exists(config_file):
+                if os.path.isfile(config_file):
                     with open(config_file) as f:
                         cfg = json.load(f)
                     for key in cfg.get("auths", {}):
