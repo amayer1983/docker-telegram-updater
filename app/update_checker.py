@@ -424,21 +424,32 @@ class UpdateChecker:
             # Health check: wait up to 30s for container to be running
             self._debug(f"  Health check: waiting for {name}...")
             healthy = False
+            state = ""
+            health = ""
             for i in range(6):
                 time.sleep(5)
-                hc = subprocess.run(
-                    ["docker", "inspect", "--format", "{{.State.Status}}||{{.State.Health.Status}}", name],
+
+                # Get container state
+                sc = subprocess.run(
+                    ["docker", "inspect", "--format", "{{.State.Status}}", name],
                     capture_output=True, text=True
                 )
-                output = hc.stdout.strip()
-                state, _, health = output.partition("||")
+                state = sc.stdout.strip() if sc.returncode == 0 else ""
+
+                # Get health status (may fail if no healthcheck defined)
+                hc = subprocess.run(
+                    ["docker", "inspect", "--format", "{{.State.Health.Status}}", name],
+                    capture_output=True, text=True
+                )
+                health = hc.stdout.strip() if hc.returncode == 0 else ""
+
                 self._debug(f"  Health check [{i+1}/6]: state={state}, health={health}")
 
                 if state != "running":
-                    # Container crashed
+                    # Container crashed or exited
                     break
 
-                if health == "" or health == "<no value>":
+                if not health or health == "<no value>":
                     # No healthcheck defined — running is good enough
                     healthy = True
                     break
