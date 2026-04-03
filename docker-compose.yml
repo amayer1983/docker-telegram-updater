@@ -1,0 +1,19 @@
+services:
+  docker-telegram-updater:
+    image: amayer1983/docker-telegram-updater:latest
+    container_name: docker-telegram-updater
+    restart: unless-stopped
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - CHAT_ID=${CHAT_ID}
+      - CRON_SCHEDULE=${CRON_SCHEDULE:-0 18 * * *}
+      - EXCLUDE_CONTAINERS=${EXCLUDE_CONTAINERS:-}
+      - TZ=${TZ:-Europe/Berlin}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - updater_data:/data
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  updater_data:
