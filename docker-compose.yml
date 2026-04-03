@@ -12,6 +12,10 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - updater_data:/data
+      # Docker credentials (for authenticated pulls, avoids rate limits)
+      - ${DOCKER_CONFIG:-/root/.docker/config.json}:/.docker/config.json:ro
+      # Compose project directories (needed to restart containers)
+      - ${COMPOSE_DIR:-/data/compose}:/data/compose
     security_opt:
       - no-new-privileges:true
 

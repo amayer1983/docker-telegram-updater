@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """Docker image update checker and container updater."""
 
+import base64
 import json
 import os
 import subprocess
+import urllib.request
+import urllib.parse
+import re
 
 
 class UpdateChecker:
@@ -24,49 +28,125 @@ class UpdateChecker:
                 containers.append({"name": name, "image": image})
         return containers
 
-    def get_local_digest(self, image):
+    def _parse_image(self, image):
+        """Parse image reference into registry, repository, tag."""
+        tag = "latest"
+        if ":" in image and not image.endswith(":"):
+            parts = image.rsplit(":", 1)
+            if "/" not in parts[1]:
+                image, tag = parts
+
+        if image.startswith("sha256:"):
+            return None, None, None
+
+        # Determine registry
+        if "/" not in image:
+            return "registry-1.docker.io", f"library/{image}", tag
+
+        first_part = image.split("/")[0]
+        if "." in first_part or ":" in first_part or first_part == "localhost":
+            registry = first_part
+            repository = "/".join(image.split("/")[1:])
+        else:
+            registry = "registry-1.docker.io"
+            repository = image
+
+        return registry, repository, tag
+
+    def _get_auth_token(self, registry, repository):
+        """Get authentication token for registry API."""
+        try:
+            # Docker Hub
+            if "docker.io" in registry:
+                # Try to use credentials from docker config
+                docker_config = os.path.expanduser("/.docker/config.json")
+                auth_header = None
+                if os.path.exists(docker_config):
+                    with open(docker_config) as f:
+                        cfg = json.load(f)
+                    for key in cfg.get("auths", {}):
+                        if "docker.io" in key:
+                            auth_header = cfg["auths"][key].get("auth")
+                            break
+
+                url = f"https://auth.docker.io/token?service=registry.docker.io&scope=repository:{repository}:pull"
+                req = urllib.request.Request(url)
+                if auth_header:
+                    req.add_header("Authorization", f"Basic {auth_header}")
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    return json.loads(resp.read()).get("token")
+
+            # GitHub Container Registry
+            if "ghcr.io" in registry:
+                url = f"https://ghcr.io/token?scope=repository:{repository}:pull"
+                with urllib.request.urlopen(url, timeout=15) as resp:
+                    return json.loads(resp.read()).get("token")
+
+        except Exception as e:
+            print(f"Auth error for {registry}/{repository}: {e}")
+        return None
+
+    def _get_remote_digest(self, registry, repository, tag, token):
+        """Get remote image digest via registry API HEAD request."""
+        if "docker.io" in registry:
+            url = f"https://registry-1.docker.io/v2/{repository}/manifests/{tag}"
+        elif "ghcr.io" in registry:
+            url = f"https://ghcr.io/v2/{repository}/manifests/{tag}"
+        else:
+            url = f"https://{registry}/v2/{repository}/manifests/{tag}"
+
+        req = urllib.request.Request(url, method="HEAD")
+        req.add_header("Accept", ", ".join([
+            "application/vnd.docker.distribution.manifest.list.v2+json",
+            "application/vnd.oci.image.index.v1+json",
+            "application/vnd.docker.distribution.manifest.v2+json",
+            "application/vnd.oci.image.manifest.v1+json",
+        ]))
+        if token:
+            req.add_header("Authorization", f"Bearer {token}")
+
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                digest = resp.headers.get("Docker-Content-Digest", "")
+                return digest
+        except Exception as e:
+            print(f"Registry error for {repository}:{tag}: {e}")
+            return None
+
+    def _get_local_digest(self, image):
+        """Get local image digest from RepoDigests."""
         result = subprocess.run(
             ["docker", "inspect", "--format", "{{index .RepoDigests 0}}", image],
             capture_output=True, text=True
         )
-        if result.returncode == 0 and result.stdout.strip():
-            digest = result.stdout.strip()
-            if "@sha256:" in digest:
-                return digest.split("@sha256:")[1]
+        if result.returncode == 0 and "@" in result.stdout:
+            return result.stdout.strip().split("@")[1]
         return None
-
-    def get_remote_digest(self, image):
-        result = subprocess.run(
-            ["docker", "manifest", "inspect", image],
-            capture_output=True, text=True,
-            env={**os.environ, "DOCKER_CLI_EXPERIMENTAL": "enabled"}
-        )
-        if result.returncode != 0:
-            return None
-        try:
-            manifest = json.loads(result.stdout)
-            if "manifests" in manifest:
-                for m in manifest["manifests"]:
-                    if m.get("platform", {}).get("architecture") == "amd64":
-                        return m["digest"].replace("sha256:", "")
-            return manifest.get("config", {}).get("digest", "").replace("sha256:", "")
-        except (json.JSONDecodeError, KeyError):
-            return None
 
     def check_all(self):
         containers = self.get_running_containers()
         print(f"Checking {len(containers)} containers for updates...")
         updates = []
+
         for c in containers:
             image = c["image"]
-            if image.startswith("sha256:"):
+            registry, repository, tag = self._parse_image(image)
+            if not registry:
                 continue
-            if ":" not in image:
-                image = image + ":latest"
-            local = self.get_local_digest(image)
-            remote = self.get_remote_digest(image)
-            if local and remote and local != remote:
+
+            local_digest = self._get_local_digest(image)
+            if not local_digest:
+                continue
+
+            token = self._get_auth_token(registry, repository)
+            remote_digest = self._get_remote_digest(registry, repository, tag, token)
+
+            if remote_digest and local_digest != remote_digest:
+                print(f"  Update available: {c['name']} ({image})")
                 updates.append(c)
+            else:
+                print(f"  Up to date: {c['name']} ({image})")
+
         # Save pending updates
         with open(self.config.pending_file, "w") as f:
             json.dump(updates, f)
@@ -92,8 +172,8 @@ class UpdateChecker:
         )
         compose_dir = inspect.stdout.strip()
 
-        if not compose_dir or not os.path.isdir(compose_dir):
-            return True, "Image pulled. Manual restart required (no compose dir)."
+        if not compose_dir:
+            return True, "Image pulled. No compose project found."
 
         # Get service name
         service = subprocess.run(
@@ -109,11 +189,22 @@ class UpdateChecker:
         # Restart via docker compose
         try:
             result = subprocess.run(
-                ["docker", "compose", "up", "-d", service_name],
-                capture_output=True, text=True, cwd=compose_dir, timeout=300
+                ["docker", "compose", "-p",
+                 name.rsplit("-", 1)[0] if "-" in name else name,
+                 "-f", os.path.join(compose_dir, "docker-compose.yml"),
+                 "up", "-d", service_name],
+                capture_output=True, text=True, timeout=300
             )
             if result.returncode != 0:
-                return False, f"Compose error: {result.stderr[:200]}"
+                # Fallback: try with compose_dir as cwd
+                result = subprocess.run(
+                    ["docker", "compose", "up", "-d", service_name],
+                    capture_output=True, text=True, cwd=compose_dir, timeout=300
+                )
+                if result.returncode != 0:
+                    return False, f"Compose error: {result.stderr[:200]}"
+        except FileNotFoundError:
+            return True, "Image pulled. Compose dir not accessible."
         except Exception as e:
             return False, f"Error: {str(e)[:200]}"
 
