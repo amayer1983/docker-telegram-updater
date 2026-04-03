@@ -4,6 +4,7 @@
 import json
 import subprocess
 import os
+import sys
 import threading
 import urllib.request
 import urllib.parse
@@ -76,6 +77,125 @@ class TelegramBot:
 
     def notify_no_updates(self):
         self.send_message("✅ *Docker Update Check*\nAlle Images sind aktuell.")
+
+    def _handle_selfupdate(self):
+        """Pull latest image and recreate own container."""
+        hostname = os.environ.get("HOSTNAME", "")
+        if not hostname:
+            self.send_message("❌ Self-Update fehlgeschlagen: Container-ID nicht gefunden.")
+            return
+
+        # Get own container info
+        result = subprocess.run(
+            ["docker", "inspect", hostname],
+            capture_output=True, text=True
+        )
+        if result.returncode != 0:
+            self.send_message("❌ Self-Update fehlgeschlagen: Container nicht gefunden.")
+            return
+
+        config = json.loads(result.stdout)[0]
+        own_name = config["Name"].lstrip("/")
+        own_image = config["Config"]["Image"]
+
+        self.send_message(f"🔄 Prüfe Update für `{own_image}`...")
+
+        # Pull latest
+        pull = subprocess.run(
+            ["docker", "pull", own_image],
+            capture_output=True, text=True, timeout=300
+        )
+        if pull.returncode != 0:
+            self.send_message(f"❌ Pull fehlgeschlagen: {pull.stderr[:200]}")
+            return
+
+        # Check if image actually changed
+        new_inspect = subprocess.run(
+            ["docker", "inspect", "--format", "{{.Id}}", own_image],
+            capture_output=True, text=True
+        )
+        new_id = new_inspect.stdout.strip()
+        old_id = config["Image"]
+
+        if new_id == old_id:
+            self.send_message("✅ Bereits auf dem neuesten Stand.")
+            return
+
+        self.send_message("⏳ Neues Image gefunden. Starte Self-Update...\nBot wird kurz offline sein.")
+
+        # Create update script that runs after this container stops
+        # The script: rename old, create new with same config, remove old
+        update_cmd = (
+            f"docker stop {own_name} && "
+            f"docker rename {own_name} {own_name}_old && "
+            f"docker run -d "
+        )
+
+        # Rebuild run command from inspect
+        run_args = []
+
+        run_args.extend(["--name", own_name])
+
+        # Restart policy
+        restart = config.get("HostConfig", {}).get("RestartPolicy", {})
+        if restart.get("Name"):
+            policy = restart["Name"]
+            if restart.get("MaximumRetryCount", 0) > 0:
+                policy += f":{restart['MaximumRetryCount']}"
+            run_args.extend(["--restart", policy])
+
+        # Network
+        network_mode = config.get("HostConfig", {}).get("NetworkMode", "")
+        if network_mode and network_mode != "default":
+            run_args.extend(["--network", network_mode])
+
+        # Env vars
+        for env in config.get("Config", {}).get("Env", []):
+            run_args.extend(["-e", env])
+
+        # Mounts
+        for mount in config.get("Mounts", []):
+            if mount["Type"] == "bind":
+                bind = f"{mount['Source']}:{mount['Destination']}"
+                if not mount.get("RW", True):
+                    bind += ":ro"
+                run_args.extend(["-v", bind])
+            elif mount["Type"] == "volume":
+                bind = f"{mount['Name']}:{mount['Destination']}"
+                if not mount.get("RW", True):
+                    bind += ":ro"
+                run_args.extend(["-v", bind])
+
+        # Ports
+        ports = config.get("HostConfig", {}).get("PortBindings", {}) or {}
+        for container_port, bindings in ports.items():
+            if bindings:
+                for b in bindings:
+                    host_ip = b.get("HostIp", "")
+                    host_port = b.get("HostPort", "")
+                    if host_ip:
+                        run_args.extend(["-p", f"{host_ip}:{host_port}:{container_port}"])
+                    else:
+                        run_args.extend(["-p", f"{host_port}:{container_port}"])
+
+        # Labels
+        for key, value in config.get("Config", {}).get("Labels", {}).items():
+            run_args.extend(["--label", f"{key}={value}"])
+
+        # Security opts
+        for opt in config.get("HostConfig", {}).get("SecurityOpt", []) or []:
+            run_args.extend(["--security-opt", opt])
+
+        # Build full command
+        run_parts = " ".join(f'"{a}"' if " " in a or "=" in a else a for a in run_args)
+        update_cmd += f"{run_parts} {own_image} && docker rm {own_name}_old"
+
+        # Execute: run update in background, then exit
+        subprocess.Popen(
+            ["sh", "-c", f"sleep 2 && {update_cmd}"],
+            start_new_session=True
+        )
+        sys.exit(0)
 
     def run_updates(self, updater):
         if self.update_running:
@@ -213,6 +333,23 @@ class TelegramBot:
             status = "AN 🔍" if self.config.debug else "AUS"
             self.send_message(f"*Debug-Modus:* {status}")
 
+        elif text == "/cleanup":
+            self.send_message("🧹 Räume alte Images auf...")
+            result = subprocess.run(
+                ["docker", "image", "prune", "-a", "--force", "--filter", "until=24h"],
+                capture_output=True, text=True, timeout=120
+            )
+            # Extract reclaimed space from output
+            lines = result.stdout.strip().split("\n")
+            space_line = [l for l in lines if "reclaimed" in l.lower()]
+            if space_line:
+                self.send_message(f"✅ {space_line[-1]}")
+            else:
+                self.send_message("✅ Keine ungenutzten Images gefunden.")
+
+        elif text == "/selfupdate":
+            self._handle_selfupdate()
+
         elif text == "/help" or text == "/start":
             self.send_message(
                 "*Docker Telegram Updater* 🐳\n\n"
@@ -220,6 +357,8 @@ class TelegramBot:
                 "/status — Container-Status anzeigen\n"
                 "/check — Jetzt auf Updates prüfen\n"
                 "/updates — Ausstehende Updates anzeigen\n"
+                "/cleanup — Alte Images aufräumen\n"
+                "/selfupdate — Bot selbst aktualisieren\n"
                 "/debug — Debug-Modus ein/ausschalten\n"
                 "/help — Diese Hilfe"
             )
