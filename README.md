@@ -109,6 +109,19 @@ When updates are found, you'll receive a message with two buttons:
 - Docker socket access (mounted as volume)
 - A Telegram Bot token and chat ID
 
+## Docker Hub Rate Limits
+
+Update checks use the registry API and do **not** count against Docker Hub pull limits. However, when pulling updated images, unauthenticated users are limited to 100 pulls per 6 hours.
+
+To avoid rate limits, mount your Docker credentials into the container:
+
+```yaml
+volumes:
+  - /root/.docker/config.json:/.docker/config.json:ro
+```
+
+If you haven't logged in yet, run `docker login` on your host first.
+
 ## Security
 
 - The container needs read-only access to the Docker socket

@@ -162,6 +162,8 @@ class UpdateChecker:
             capture_output=True, text=True, timeout=600
         )
         if result.returncode != 0:
+            if "toomanyrequests" in result.stderr:
+                return False, "Rate limit erreicht. `docker login` auf dem Host ausführen und Credentials mounten."
             return False, f"Pull failed: {result.stderr[:200]}"
 
         # Find compose project directory
