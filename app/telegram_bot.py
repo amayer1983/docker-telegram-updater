@@ -15,6 +15,8 @@ class TelegramBot:
         self.config = config
         self.running = True
         self.update_running = False
+        from i18n import get_translator
+        self.t = get_translator(config.language)
 
     def stop(self):
         self.running = False
@@ -88,8 +90,8 @@ class TelegramBot:
         remaining = [u for u in updates if f"update_one:{u['name']}" != callback_data]
         if remaining:
             keyboard.append([
-                {"text": "🚀 Alle updaten", "callback_data": "update_all"},
-                {"text": "✋ Manuell", "callback_data": "update_skip"}
+                {"text": self.t("update_all_btn"), "callback_data": "update_all"},
+                {"text": self.t("manual_btn"), "callback_data": "update_skip"}
             ])
 
         return {"inline_keyboard": keyboard}
@@ -97,7 +99,7 @@ class TelegramBot:
     def _run_single_update(self, checker, container_name):
         """Update a single container."""
         if not os.path.exists(self.config.pending_file):
-            self.send_message("⚠️ Keine ausstehenden Updates gefunden.")
+            self.send_message(self.t("no_pending_updates"))
             return
 
         with open(self.config.pending_file) as f:
@@ -105,10 +107,10 @@ class TelegramBot:
 
         target = next((u for u in updates if u["name"] == container_name), None)
         if not target:
-            self.send_message(f"⚠️ Container `{container_name}` nicht in der Update-Liste.")
+            self.send_message(self.t("container_not_in_list", name=container_name))
             return
 
-        self.send_message(f"⏳ Update `{container_name}`...")
+        self.send_message(self.t("update_single_starting", name=container_name))
 
         try:
             success, msg = checker.update_container(target["name"], target["image"])
@@ -123,7 +125,7 @@ class TelegramBot:
             json.dump(remaining, f)
 
         if not remaining:
-            self.send_message("✅ Alle Updates abgeschlossen.")
+            self.send_message(self.t("update_all_done"))
 
     def notify_updates(self, updates):
         if not updates:
@@ -132,8 +134,8 @@ class TelegramBot:
         for u in updates:
             size = u.get('size', '?')
             created = u.get('created', '?')
-            names.append(f"• `{u['name']}` ({u['image']})\n  📦 {size} | 📅 Aktuell: {created}")
-        text = "🔄 *Docker Updates verfügbar*\n\n" + "\n".join(names)
+            names.append(f"• `{u['name']}` ({u['image']})\n  📦 {size} | 📅 {self.t('current')}: {created}")
+        text = self.t("updates_available") + "\n\n" + "\n".join(names)
 
         # One button per container + all/skip at the bottom
         keyboard = []
@@ -143,21 +145,21 @@ class TelegramBot:
                 {"text": f"🔄 {u['name']} ({size})", "callback_data": f"update_one:{u['name']}"}
             ])
         keyboard.append([
-            {"text": "🚀 Alle updaten", "callback_data": "update_all"},
-            {"text": "✋ Manuell", "callback_data": "update_skip"}
+            {"text": self.t("update_all_btn"), "callback_data": "update_all"},
+            {"text": self.t("manual_btn"), "callback_data": "update_skip"}
         ])
 
         reply_markup = {"inline_keyboard": keyboard}
         self.send_message(text, reply_markup)
 
     def notify_no_updates(self):
-        self.send_message("✅ *Docker Update Check*\nAlle Images sind aktuell.")
+        self.send_message(self.t("all_up_to_date"))
 
     def _handle_selfupdate(self):
         """Pull latest image and recreate own container."""
         hostname = os.environ.get("HOSTNAME", "")
         if not hostname:
-            self.send_message("❌ Self-Update fehlgeschlagen: Container-ID nicht gefunden.")
+            self.send_message(self.t("selfupdate_failed_id"))
             return
 
         # Get own container info
@@ -166,7 +168,7 @@ class TelegramBot:
             capture_output=True, text=True
         )
         if result.returncode != 0:
-            self.send_message("❌ Self-Update fehlgeschlagen: Container nicht gefunden.")
+            self.send_message(self.t("selfupdate_failed_container"))
             return
 
         config = json.loads(result.stdout)[0]
@@ -177,7 +179,11 @@ class TelegramBot:
         old_created = config.get("Created", "")[:10]
         old_id_short = config["Image"][:19]
 
-        self.send_message(f"🔄 Prüfe Update für `{own_image}`...\n📅 Aktuelle Version: {old_created}\n🆔 Image: `{old_id_short}`")
+        self.send_message(
+            self.t("selfupdate_checking", image=own_image) + "\n"
+            + self.t("selfupdate_current_version", date=old_created) + "\n"
+            + self.t("selfupdate_image_id", id=old_id_short)
+        )
 
         # Pull latest
         pull = subprocess.run(
@@ -185,7 +191,7 @@ class TelegramBot:
             capture_output=True, text=True, timeout=300
         )
         if pull.returncode != 0:
-            self.send_message(f"❌ Pull fehlgeschlagen: {pull.stderr[:200]}")
+            self.send_message(self.t("selfupdate_failed_pull", error=pull.stderr[:200]))
             return
 
         # Check if image actually changed
@@ -199,15 +205,15 @@ class TelegramBot:
         old_id = config["Image"]
 
         if new_id == old_id:
-            self.send_message("✅ Bereits auf dem neuesten Stand.")
+            self.send_message(self.t("selfupdate_up_to_date"))
             return
 
         new_id_short = new_id[:19]
         self.send_message(
-            f"⏳ *Neues Image gefunden!*\n"
-            f"📅 Neu: {new_created} | Alt: {old_created}\n"
-            f"🆔 `{old_id_short}` → `{new_id_short}`\n\n"
-            f"Starte Self-Update... Bot wird kurz offline sein."
+            self.t("selfupdate_found") + "\n"
+            + self.t("selfupdate_dates", new=new_created, old=old_created) + "\n"
+            + self.t("selfupdate_ids", old=old_id_short, new=new_id_short) + "\n\n"
+            + self.t("selfupdate_restarting")
         )
 
         self._do_selfupdate(config, own_name, own_image)
@@ -329,9 +335,9 @@ class TelegramBot:
         # Notify and update
         own_name = config["Name"].lstrip("/")
         self.send_message(
-            f"🔄 *Auto Self-Update*\n"
-            f"📅 {old_created} → {new_created}\n"
-            f"Starte Update... Bot wird kurz offline sein."
+            self.t("selfupdate_auto") + "\n"
+            + self.t("selfupdate_dates", new=new_created, old=old_created) + "\n"
+            + self.t("selfupdate_restarting")
         )
 
         # Reuse the selfupdate logic
@@ -339,23 +345,23 @@ class TelegramBot:
 
     def run_updates(self, updater):
         if self.update_running:
-            self.send_message("⚠️ Update läuft bereits...")
+            self.send_message(self.t("update_already_running"))
             return
 
         pending_file = self.config.pending_file
         if not os.path.exists(pending_file):
-            self.send_message("⚠️ Keine ausstehenden Updates gefunden.")
+            self.send_message(self.t("no_pending_updates"))
             return
 
         with open(pending_file) as f:
             updates = json.load(f)
 
         if not updates:
-            self.send_message("⚠️ Keine ausstehenden Updates gefunden.")
+            self.send_message(self.t("no_pending_updates"))
             return
 
         self.update_running = True
-        self.send_message(f"⏳ Starte Update für {len(updates)} Container...")
+        self.send_message(self.t("update_starting", count=len(updates)))
 
         results = []
         for u in updates:
@@ -371,7 +377,7 @@ class TelegramBot:
         except OSError:
             pass
 
-        self.send_message("*Update-Ergebnis:*\n\n" + "\n".join(results))
+        self.send_message(self.t("update_result") + "\n\n" + "\n".join(results))
         self.update_running = False
 
     def listen(self, checker, scheduler):
@@ -428,20 +434,20 @@ class TelegramBot:
         chat_id = callback.get("message", {}).get("chat", {}).get("id")
 
         if user_id != self.config.chat_id:
-            self.answer_callback(callback["id"], "Nicht autorisiert.")
+            self.answer_callback(callback["id"], self.t("not_authorized"))
             return
 
         if data == "update_all":
             if msg_id and chat_id:
                 self.remove_buttons(chat_id, msg_id)
-            self.answer_callback(callback["id"], "Updates werden gestartet...")
+            self.answer_callback(callback["id"], self.t("updates_starting_cb"))
             t = threading.Thread(target=self.run_updates, args=(checker,))
             t.start()
         elif data == "update_skip":
             if msg_id and chat_id:
                 self.remove_buttons(chat_id, msg_id)
-            self.answer_callback(callback["id"], "OK, manuell.")
-            self.send_message("👍 Updates werden nicht automatisch durchgeführt.")
+            self.answer_callback(callback["id"], self.t("ok_manual_cb"))
+            self.send_message(self.t("manual_message"))
             try:
                 os.remove(self.config.pending_file)
             except OSError:
@@ -467,10 +473,10 @@ class TelegramBot:
                 ["docker", "ps", "--format", "{{.Names}}\t{{.Status}}"],
                 capture_output=True, text=True
             )
-            self.send_message(f"*Container-Status:*\n```\n{ps.stdout}```")
+            self.send_message(f"{self.t('container_status')}\n```\n{ps.stdout}```")
 
         elif text == "/check":
-            self.send_message("🔍 Prüfe auf Updates...")
+            self.send_message(self.t("checking_updates"))
             updates = checker.check_all(bot=self)
             if updates:
                 self.notify_updates(updates)
@@ -483,17 +489,17 @@ class TelegramBot:
                     pending = json.load(f)
                 if pending:
                     names = [f"• `{u['name']}`" for u in pending]
-                    self.send_message("*Ausstehende Updates:*\n" + "\n".join(names))
+                    self.send_message(self.t("pending_title") + "\n" + "\n".join(names))
                     return
-            self.send_message("Keine ausstehenden Updates.")
+            self.send_message(self.t("no_pending"))
 
         elif text == "/debug":
             self.config.debug = not self.config.debug
-            status = "AN 🔍" if self.config.debug else "AUS"
-            self.send_message(f"*Debug-Modus:* {status}")
+            status = self.t("debug_on") if self.config.debug else self.t("debug_off")
+            self.send_message(self.t("debug_mode", status=status))
 
         elif text == "/cleanup":
-            self.send_message("🧹 Räume alte Images auf...")
+            self.send_message(self.t("cleanup_starting"))
             result = subprocess.run(
                 ["docker", "image", "prune", "-a", "--force", "--filter", "until=24h"],
                 capture_output=True, text=True, timeout=120
@@ -504,20 +510,46 @@ class TelegramBot:
             if space_line:
                 self.send_message(f"✅ {space_line[-1]}")
             else:
-                self.send_message("✅ Keine ungenutzten Images gefunden.")
+                self.send_message(self.t("cleanup_none"))
 
         elif text == "/selfupdate":
             self._handle_selfupdate()
 
+        elif text.startswith("/lang"):
+            from i18n import available_languages, get_translator
+            langs = available_languages()
+            parts = text.split()
+            if len(parts) == 2 and parts[1].lower() in langs:
+                new_lang = parts[1].lower()
+                self.config.language = new_lang
+                self.t = get_translator(new_lang)
+                self.send_message(self.t("lang_changed"))
+            else:
+                self.send_message(self.t("lang_usage") + f"\n\n📂 {', '.join(langs)}")
+
+        elif text == "/settings":
+            debug_status = self.t("debug_on") if self.config.debug else self.t("debug_off")
+            auto_su = "ON ✅" if self.config.auto_selfupdate else "OFF"
+            self.send_message(
+                self.t("settings_title") + "\n\n"
+                + f"🗓 Schedule: `{self.config.cron_schedule}`\n"
+                + f"🌍 {self.t('settings_language')}: `{self.config.language}`\n"
+                + f"🔄 Auto-Selfupdate: {auto_su}\n"
+                + f"🔍 Debug: {debug_status}\n"
+                + f"🚫 Exclude: `{', '.join(self.config.exclude_containers) or '-'}`"
+            )
+
         elif text == "/help" or text == "/start":
             self.send_message(
-                "*Docker Telegram Updater v1.2.0* 🐳\n\n"
-                "*Befehle:*\n"
-                "/status — Container-Status anzeigen\n"
-                "/check — Jetzt auf Updates prüfen\n"
-                "/updates — Ausstehende Updates anzeigen\n"
-                "/cleanup — Alte Images aufräumen\n"
-                "/selfupdate — Bot selbst aktualisieren\n"
-                "/debug — Debug-Modus ein/ausschalten\n"
-                "/help — Diese Hilfe"
+                self.t("help_title") + "\n\n"
+                + self.t("help_commands") + "\n"
+                + self.t("help_status") + "\n"
+                + self.t("help_check") + "\n"
+                + self.t("help_updates") + "\n"
+                + self.t("help_cleanup") + "\n"
+                + self.t("help_selfupdate") + "\n"
+                + self.t("help_debug") + "\n"
+                + self.t("help_lang") + "\n"
+                + self.t("help_settings") + "\n"
+                + self.t("help_help")
             )

@@ -23,12 +23,15 @@ def main():
     bot = TelegramBot(config)
     checker = UpdateChecker(config)
     scheduler = Scheduler(config, checker, bot)
+    web = None
 
     # Graceful shutdown
     def shutdown(sig, frame):
         print("Shutting down...")
         scheduler.stop()
         bot.stop()
+        if web:
+            web.stop()
 
     signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
@@ -36,10 +39,19 @@ def main():
     # Start scheduler in background
     scheduler.start()
 
+    # Start Web UI if enabled
+    if config.web_ui:
+        from web_ui import WebUI
+        web = WebUI(config, checker, bot, config.web_port, config.web_password)
+        web.start()
+
     print(f"Docker Telegram Updater started.")
     print(f"Schedule: {config.cron_schedule}")
     print(f"Excluded: {config.exclude_containers or 'none'}")
     print(f"Auto selfupdate: {'ON' if config.auto_selfupdate else 'OFF'}")
+    print(f"Language: {config.language}")
+    if config.web_ui:
+        print(f"Web UI: http://0.0.0.0:{config.web_port}")
 
     # Start bot listener (blocking)
     bot.listen(checker, scheduler)
