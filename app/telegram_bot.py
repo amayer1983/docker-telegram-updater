@@ -235,7 +235,17 @@ class TelegramBot:
         self.update_running = False
 
     def listen(self, checker, scheduler):
-        offset = 0
+        import time as _time
+        self.start_time = _time.time()
+
+        # Flush old updates from queue to prevent replaying commands after restart
+        flush = self.api_call("getUpdates", {"offset": -1, "timeout": 0})
+        if flush and flush.get("ok") and flush.get("result"):
+            offset = flush["result"][-1]["update_id"] + 1
+            print(f"Flushed {len(flush['result'])} old updates from queue.")
+        else:
+            offset = 0
+
         print("Bot listener started. Waiting for Telegram messages...")
 
         while self.running:
