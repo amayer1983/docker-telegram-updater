@@ -8,15 +8,20 @@ Monitor your Docker containers for image updates and manage them directly via Te
 
 ## Features
 
-- **Automatic update detection** — compares local and remote image digests on a configurable schedule
-- **Telegram notifications** — get notified when updates are available
-- **Per-container or bulk updates** — update individual containers or all at once with inline buttons
+- **Automatic update detection** — compares local and remote image digests on a configurable cron schedule
+- **Telegram notifications** — get notified when updates are available, with inline action buttons
+- **Per-container or bulk updates** — update individual containers or all at once
+- **Per-container auto-update** — selected containers update automatically without confirmation (`/autoupdate`)
+- **Pin/Freeze containers** — exclude containers from updates via Telegram (`/pin`, `/unpin`)
+- **Partial name matching** — type just the beginning of a container name (e.g. `/pin ngi` → `nginx`)
+- **Update history** — persistent log of all updates, viewable via `/history` or the Web UI
+- **Health check after update** — verifies the container is running (and healthy) after recreation
+- **Auto-rollback** — failed updates or health checks automatically restore the previous container
 - **Self-update** — the bot can update itself via `/selfupdate` or automatically with `AUTO_SELFUPDATE=true`
 - **Cleanup** — remove old unused images via `/cleanup`
 - **Debug mode** — toggle detailed diagnostics via `/debug`
-- **Auto-rollback** — failed updates automatically restore the previous container
-- **Multi-language** — 16 languages included, switch via `/lang` or add your own JSON file
-- **Optional Web UI** — dashboard with container status and settings, password-protected
+- **Multi-language** — 16 languages included, switch via `/lang` or add your own
+- **Optional Web UI** — dashboard with status, history, and settings, password-protected
 - **Works with and without Docker Hub login** — credentials are optional
 - **Lightweight** — Python standard library only, no extra dependencies
 - **Docker-native** — runs as a container, manages containers via Docker socket
@@ -39,8 +44,6 @@ Look for `"chat":{"id":YOUR_CHAT_ID}` in the response.
 
 ### 3. Run the container
 
-**Basic (without Docker Hub login):**
-
 ```bash
 docker run -d \
   --name docker-telegram-updater \
@@ -51,24 +54,9 @@ docker run -d \
   amayer1983/docker-telegram-updater:latest
 ```
 
-**With Docker Hub login (recommended, avoids rate limits):**
+That's it — the bot will check for updates daily at 18:00 and notify you via Telegram.
 
-```bash
-docker run -d \
-  --name docker-telegram-updater \
-  --restart unless-stopped \
-  -e BOT_TOKEN=your-bot-token \
-  -e CHAT_ID=your-chat-id \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v /root/.docker/config.json:/.docker/config.json:ro \
-  amayer1983/docker-telegram-updater:latest
-```
-
-> Run `docker login` on your host first to create the credentials file.
-
-### Or use Docker Compose / Portainer Stack
-
-**Without Docker Hub login:**
+### Docker Compose / Portainer Stack
 
 ```yaml
 services:
@@ -91,7 +79,9 @@ volumes:
   updater_data:
 ```
 
-**With Docker Hub login (add this line to volumes):**
+### With Docker Hub login (optional, avoids rate limits)
+
+Run `docker login` on your host first, then add this volume:
 
 ```yaml
     volumes:
@@ -102,25 +92,39 @@ volumes:
 
 ## Telegram Commands
 
+### Updates & Monitoring
+
 | Command | Description |
 |---------|-------------|
-| `/status` | Show all running containers and their status |
 | `/check` | Manually trigger an update check |
+| `/status` | Show all running containers and their status |
 | `/updates` | Show pending updates |
-| `/cleanup` | Remove old unused Docker images |
 | `/history` | Show update history (last 10 entries) |
-| `/pin <name>` | Pin a container (skip updates). Without name: show pinned list |
-| `/unpin <name>` | Unpin a container (include in updates again) |
-| `/autoupdate <name>` | Toggle auto-update for a container (no confirmation needed). Without name: show list |
+
+### Container Management
+
+| Command | Description |
+|---------|-------------|
+| `/pin <name>` | Pin a container — excluded from updates. Without name: show pinned list |
+| `/unpin <name>` | Unpin a container — included in updates again |
+| `/autoupdate <name>` | Toggle auto-update for a container — updates without confirmation. Without name: show list |
+| `/cleanup` | Remove old unused Docker images |
+
+### Bot Management
+
+| Command | Description |
+|---------|-------------|
 | `/selfupdate` | Update the bot itself to the latest version |
 | `/debug` | Toggle debug mode for detailed diagnostics |
-| `/lang` | Switch language (e.g. `/lang en`, `/lang de`) |
+| `/lang <code>` | Switch language (e.g. `/lang en`, `/lang de`) |
 | `/settings` | Show current configuration |
-| `/help` | Show available commands |
+| `/help` | Show available commands and version |
+
+> **Partial name matching:** You don't need to type the full container name. `/pin ngi` will match `nginx` if it's the only container starting with "ngi". If multiple containers match, the bot shows all options.
 
 ## Update Workflow
 
-When updates are found, you receive a message with image sizes, dates, and buttons:
+When updates are found, you receive a Telegram message with image sizes, dates, and action buttons:
 
 ```
 🔄 Docker Updates Available
@@ -139,7 +143,22 @@ When updates are found, you receive a message with image sizes, dates, and butto
 - **🚀 Update all** — pull and restart all containers at once
 - **✋ Manual** — dismiss and handle updates yourself
 
-The bot recreates containers with the same configuration (ports, volumes, environment, labels, networks). After recreation, a health check verifies the container is running (and healthy, if a Docker HEALTHCHECK is defined). If the update or health check fails, it automatically rolls back to the previous container.
+### What happens during an update
+
+1. The bot pulls the new image
+2. Stops the old container and renames it as backup
+3. Recreates the container with the same configuration (ports, volumes, environment, labels, networks)
+4. Runs a **health check** — waits up to 30 seconds, verifying the container is running (and healthy, if a Docker HEALTHCHECK is defined)
+5. On success: removes the backup and logs the update to history
+6. On failure: **automatically rolls back** to the previous container
+
+### Auto-update mode
+
+Containers set to auto-update (`/autoupdate nginx`) are updated automatically during scheduled checks — no button press needed. The bot sends a summary after completion. All other containers still show the usual notification with buttons.
+
+### Pinned containers
+
+Pinned containers (`/pin nginx`) are completely excluded from update checks. Use this for containers you want to keep on a specific version. Unpin anytime with `/unpin nginx`.
 
 ## Configuration
 
@@ -148,9 +167,9 @@ The bot recreates containers with the same configuration (ports, volumes, enviro
 | `BOT_TOKEN` | *required* | Telegram Bot API token |
 | `CHAT_ID` | *required* | Your Telegram chat ID |
 | `CRON_SCHEDULE` | `0 18 * * *` | Cron expression for scheduled checks |
-| `EXCLUDE_CONTAINERS` | | Comma-separated container names to exclude |
+| `EXCLUDE_CONTAINERS` | | Comma-separated container names to permanently exclude |
 | `AUTO_SELFUPDATE` | `false` | Automatically update the bot on each scheduled check |
-| `LANGUAGE` | `en` | Bot language (`en`, `de`, `fr`, `es`, `it`, `nl`, `pt`, `pl`, `tr`, `ru`, `uk`, `ar`, `hi`, `ja`, `ko`, `zh`) |
+| `LANGUAGE` | `en` | Bot language (see [Multi-Language](#multi-language)) |
 | `WEB_UI` | `false` | Enable optional web dashboard |
 | `WEB_PORT` | `8080` | Web UI port (inside container) |
 | `WEB_PASSWORD` | | Password for Web UI (Basic Auth). Leave empty for no protection |
@@ -165,27 +184,18 @@ The bot recreates containers with the same configuration (ports, volumes, enviro
 | `0 18 * * 1-5` | Weekdays at 18:00 |
 | `*/30 * * * *` | Every 30 minutes |
 
-## Docker Hub Rate Limits
+### Excluding containers
 
-| | Update checks | Image pulls |
-|---|---|---|
-| **Without login** | Unlimited (uses registry API) | 100 per 6 hours |
-| **With login** | Unlimited | Unlimited |
+There are two ways to exclude containers from updates:
 
-Update checks use the registry API and do **not** count against pull limits. For most setups without login, the rate limit is not an issue.
-
-To use authenticated pulls, mount your Docker credentials:
-
-```yaml
-volumes:
-  - /root/.docker/config.json:/.docker/config.json:ro
-```
-
-If the credentials file doesn't exist, simply leave out this line — the bot works fine without it.
+| Method | How | Persistent | Use case |
+|--------|-----|-----------|----------|
+| `EXCLUDE_CONTAINERS` env var | Set at container start | Across restarts | Permanently exclude containers |
+| `/pin` command in Telegram | Send `/pin <name>` | Saved to data volume | Temporarily freeze a container version |
 
 ## Web UI (Optional)
 
-Enable a lightweight web dashboard for status overview and settings:
+Enable a lightweight web dashboard for status overview, update history, and settings:
 
 ```bash
 docker run -d \
@@ -200,9 +210,13 @@ docker run -d \
 ```
 
 The Web UI is **disabled by default** to keep the container minimal. When enabled, it provides:
-- **Status page** — live container overview with health badges
+
+- **Status page** — live container overview with health badges and pending update count
+- **History page** — full update log with timestamps, results, and details
 - **Settings page** — change language, debug mode, and auto-selfupdate via browser
 - **Update check** — trigger a check from the dashboard
+
+The Web UI is fully translated — it follows the configured language.
 
 Access it at `http://your-server:8080` with the configured password.
 
@@ -219,26 +233,40 @@ Access it at `http://your-server:8080` with the configured password.
 
 **Add your own language:**
 
-Create a JSON file in the `lang/` directory (e.g. `sv.json` for Swedish) with all translation keys. Use `en.json` as a template. You can mount a custom lang directory:
+Create a JSON file in the `lang/` directory (e.g. `sv.json` for Swedish) with all translation keys. Use `en.json` as a template. The bot picks up new files automatically. You can mount a custom lang directory:
 
 ```yaml
 volumes:
   - ./my-languages:/app/lang
 ```
 
-## How it works
+## How It Works
 
-1. On the configured schedule, the checker compares local image digests with remote registry digests via the Docker Registry HTTP API
-2. If differences are found, a Telegram notification is sent with inline action buttons for each container
-3. When you press update, the bot pulls the new image, stops the old container, and recreates it with the same configuration
-4. If recreation fails, the old container is automatically restored (rollback)
-5. Results are reported back via Telegram
+1. On the configured schedule, the bot compares local image digests with remote registry digests via the Docker Registry HTTP API
+2. Pinned containers and containers in `EXCLUDE_CONTAINERS` are skipped
+3. If updates are found, containers on the auto-update list are updated immediately
+4. Remaining updates are sent as a Telegram notification with inline action buttons
+5. When you press update, the bot pulls the new image, recreates the container, and runs a health check
+6. If recreation or health check fails, the old container is automatically restored (rollback)
+7. All updates (success and failure) are logged to the update history
 
-## What gets skipped
+## What Gets Skipped
 
 - The bot's own container (use `/selfupdate` instead)
 - Containers running with image IDs instead of tags (locally built images)
 - Containers in the `EXCLUDE_CONTAINERS` list
+- Pinned containers (`/pin`)
+
+## Docker Hub Rate Limits
+
+| | Update checks | Image pulls |
+|---|---|---|
+| **Without login** | Unlimited (uses registry API) | 100 per 6 hours |
+| **With login** | Unlimited | Unlimited |
+
+Update checks use the registry API and do **not** count against pull limits. For most setups without login, the rate limit is not an issue.
+
+If the credentials file doesn't exist, simply leave out the volume mount — the bot works fine without it.
 
 ## Security
 
@@ -247,6 +275,7 @@ volumes:
 - `no-new-privileges` security option is recommended
 - No external dependencies beyond Python standard library and Docker CLI
 - Docker credentials are mounted read-only
+- Web UI password is hashed (SHA-256), never stored in plain text
 
 ## License
 
