@@ -255,9 +255,11 @@ Access it at `http://your-server:8080` with the configured password.
 - Via Web UI: Settings page
 - Via environment variable: `LANGUAGE=de`
 
+**Missing your language or found a translation error?** Open an [issue](https://github.com/amayer1983/docker-telegram-updater/issues) or submit a pull request — contributions are welcome!
+
 **Add your own language:**
 
-Create a JSON file in the `lang/` directory (e.g. `sv.json` for Swedish) with all translation keys. Use `en.json` as a template. The bot picks up new files automatically. You can mount a custom lang directory:
+Create a JSON file in the `lang/` directory (e.g. `sv.json` for Swedish) with all translation keys. Use `en.json` as a template. The bot picks up new files automatically — no code changes needed. You can also mount a custom lang directory:
 
 ```yaml
 volumes:
