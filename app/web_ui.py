@@ -252,7 +252,7 @@ select {{ cursor: pointer; }}
 
             from i18n import available_languages
             langs = available_languages()
-            lang_names = {"en": "English", "de": "Deutsch", "fr": "Français", "es": "Español", "it": "Italiano", "nl": "Nederlands", "pt": "Português", "pl": "Polski", "ru": "Русский", "ja": "日本語", "zh": "中文"}
+            lang_names = {"en": "English", "de": "Deutsch", "fr": "Français", "es": "Español", "it": "Italiano", "nl": "Nederlands", "pt": "Português", "pl": "Polski", "tr": "Türkçe", "ru": "Русский", "uk": "Українська", "ar": "العربية", "hi": "हिन्दी", "ja": "日本語", "ko": "한국어", "zh": "中文"}
             lang_options = ""
             for l in langs:
                 sel = 'selected' if l == config.language else ''
