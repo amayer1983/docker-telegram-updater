@@ -204,7 +204,7 @@ class UpdateChecker:
         # Pull new image
         result = subprocess.run(
             ["docker", "pull", image],
-            capture_output=True, text=True, timeout=600
+            capture_output=True, text=True, timeout=1800
         )
         if result.returncode != 0:
             if "toomanyrequests" in result.stderr:
