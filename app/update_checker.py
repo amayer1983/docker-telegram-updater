@@ -19,11 +19,28 @@ class UpdateChecker:
             ["docker", "ps", "--format", "{{.Names}}|{{.Image}}"],
             capture_output=True, text=True
         )
+        # Get own container name to exclude self
+        hostname = os.environ.get("HOSTNAME", "")
+        own_name = None
+        if hostname:
+            own_result = subprocess.run(
+                ["docker", "inspect", "--format", "{{.Name}}", hostname],
+                capture_output=True, text=True
+            )
+            if own_result.returncode == 0:
+                own_name = own_result.stdout.strip().lstrip("/")
+
         containers = []
         for line in result.stdout.strip().split("\n"):
             if not line:
                 continue
             name, image = line.split("|", 1)
+            # Skip self
+            if own_name and name == own_name:
+                continue
+            # Skip images referenced by ID (no tag)
+            if re.match(r'^[0-9a-f]{12,}$', image):
+                continue
             if name not in self.config.exclude_containers:
                 containers.append({"name": name, "image": image})
         return containers
