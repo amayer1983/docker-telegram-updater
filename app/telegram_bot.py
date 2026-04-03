@@ -352,7 +352,7 @@ class TelegramBot:
 
         elif text == "/help" or text == "/start":
             self.send_message(
-                "*Docker Telegram Updater* 🐳\n\n"
+                "*Docker Telegram Updater v1.1.0* 🐳\n\n"
                 "*Befehle:*\n"
                 "/status — Container-Status anzeigen\n"
                 "/check — Jetzt auf Updates prüfen\n"
