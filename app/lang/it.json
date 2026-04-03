@@ -89,5 +89,14 @@
   "unpin_removed": "📌 `{name}` sbloccato — sarà incluso negli aggiornamenti.",
   "unpin_not_found": "📌 `{name}` non è bloccato.",
   "help_pin": "/pin — Blocca contenitore",
-  "help_unpin": "/unpin — Sblocca contenitore"
+  "help_unpin": "/unpin — Sblocca contenitore",
+  "resolve_multiple": "Più corrispondenze: {names}. Sii più specifico.",
+  "resolve_not_found": "Contenitore `{name}` non trovato.",
+  "autoupdate_list": "⚡ Contenitori con aggiornamento automatico:",
+  "autoupdate_empty": "⚡ Nessun contenitore con aggiornamento automatico.",
+  "autoupdate_on": "⚡ `{name}` — aggiornamento automatico attivato.",
+  "autoupdate_off": "⚡ `{name}` — aggiornamento automatico disattivato.",
+  "autoupdate_running": "⚡ Aggiornamento automatico di {count} contenitore/i...",
+  "autoupdate_done": "⚡ Aggiornamento automatico completato:",
+  "help_autoupdate": "/autoupdate — Attiva/disattiva aggiornamento automatico"
 }

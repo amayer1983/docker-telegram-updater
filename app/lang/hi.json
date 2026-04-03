@@ -89,5 +89,14 @@
   "unpin_removed": "📌 `{name}` अनपिन किया — फिर से अपडेट होगा।",
   "unpin_not_found": "📌 `{name}` पिन नहीं है।",
   "help_pin": "/pin — कंटेनर पिन करें",
-  "help_unpin": "/unpin — कंटेनर अनपिन करें"
+  "help_unpin": "/unpin — कंटेनर अनपिन करें",
+  "resolve_multiple": "कई मिलान: {names}. अधिक विशिष्ट रहें।",
+  "resolve_not_found": "कंटेनर `{name}` नहीं मिला।",
+  "autoupdate_list": "⚡ ऑटो-अपडेट कंटेनर:",
+  "autoupdate_empty": "⚡ कोई ऑटो-अपडेट कंटेनर नहीं।",
+  "autoupdate_on": "⚡ `{name}` — ऑटो-अपडेट सक्रिय।",
+  "autoupdate_off": "⚡ `{name}` — ऑटो-अपडेट निष्क्रिय।",
+  "autoupdate_running": "⚡ {count} कंटेनर ऑटो-अपडेट हो रहे हैं...",
+  "autoupdate_done": "⚡ ऑटो-अपडेट पूर्ण:",
+  "help_autoupdate": "/autoupdate — ऑटो-अपडेट टॉगल करें"
 }

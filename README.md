@@ -111,6 +111,7 @@ volumes:
 | `/history` | Show update history (last 10 entries) |
 | `/pin <name>` | Pin a container (skip updates). Without name: show pinned list |
 | `/unpin <name>` | Unpin a container (include in updates again) |
+| `/autoupdate <name>` | Toggle auto-update for a container (no confirmation needed). Without name: show list |
 | `/selfupdate` | Update the bot itself to the latest version |
 | `/debug` | Toggle debug mode for detailed diagnostics |
 | `/lang` | Switch language (e.g. `/lang en`, `/lang de`) |

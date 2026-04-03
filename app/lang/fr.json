@@ -89,5 +89,14 @@
   "unpin_removed": "📌 `{name}` désépinglé — sera inclus dans les mises à jour.",
   "unpin_not_found": "📌 `{name}` n'est pas épinglé.",
   "help_pin": "/pin — Épingler un conteneur",
-  "help_unpin": "/unpin — Désépingler un conteneur"
+  "help_unpin": "/unpin — Désépingler un conteneur",
+  "resolve_multiple": "Plusieurs correspondances : {names}. Soyez plus précis.",
+  "resolve_not_found": "Conteneur `{name}` introuvable.",
+  "autoupdate_list": "⚡ Conteneurs en mise à jour automatique :",
+  "autoupdate_empty": "⚡ Aucun conteneur en mise à jour automatique.",
+  "autoupdate_on": "⚡ `{name}` — mise à jour automatique activée.",
+  "autoupdate_off": "⚡ `{name}` — mise à jour automatique désactivée.",
+  "autoupdate_running": "⚡ Mise à jour automatique de {count} conteneur(s)...",
+  "autoupdate_done": "⚡ Mise à jour automatique terminée :",
+  "help_autoupdate": "/autoupdate — Activer/désactiver la mise à jour automatique"
 }

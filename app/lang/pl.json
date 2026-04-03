@@ -89,5 +89,14 @@
   "unpin_removed": "📌 `{name}` odpięty — będzie uwzględniany w aktualizacjach.",
   "unpin_not_found": "📌 `{name}` nie jest przypięty.",
   "help_pin": "/pin — Przypnij kontener",
-  "help_unpin": "/unpin — Odepnij kontener"
+  "help_unpin": "/unpin — Odepnij kontener",
+  "resolve_multiple": "Wiele dopasowań: {names}. Bądź bardziej precyzyjny.",
+  "resolve_not_found": "Kontener `{name}` nie znaleziony.",
+  "autoupdate_list": "⚡ Kontenery z auto-aktualizacją:",
+  "autoupdate_empty": "⚡ Brak kontenerów z auto-aktualizacją.",
+  "autoupdate_on": "⚡ `{name}` — auto-aktualizacja włączona.",
+  "autoupdate_off": "⚡ `{name}` — auto-aktualizacja wyłączona.",
+  "autoupdate_running": "⚡ Auto-aktualizacja {count} kontenera/ów...",
+  "autoupdate_done": "⚡ Auto-aktualizacja zakończona:",
+  "help_autoupdate": "/autoupdate — Włącz/wyłącz auto-aktualizację"
 }

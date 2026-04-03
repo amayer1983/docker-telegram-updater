@@ -89,5 +89,14 @@
   "unpin_removed": "📌 تم إلغاء تثبيت `{name}`.",
   "unpin_not_found": "📌 `{name}` غير مثبت.",
   "help_pin": "/pin — تثبيت حاوية",
-  "help_unpin": "/unpin — إلغاء تثبيت حاوية"
+  "help_unpin": "/unpin — إلغاء تثبيت حاوية",
+  "resolve_multiple": "عدة تطابقات: {names}. كن أكثر تحديداً.",
+  "resolve_not_found": "الحاوية `{name}` غير موجودة.",
+  "autoupdate_list": "⚡ حاويات التحديث التلقائي:",
+  "autoupdate_empty": "⚡ لا توجد حاويات للتحديث التلقائي.",
+  "autoupdate_on": "⚡ `{name}` — التحديث التلقائي مفعل.",
+  "autoupdate_off": "⚡ `{name}` — التحديث التلقائي معطل.",
+  "autoupdate_running": "⚡ تحديث تلقائي لـ {count} حاوية...",
+  "autoupdate_done": "⚡ التحديث التلقائي مكتمل:",
+  "help_autoupdate": "/autoupdate — تفعيل/تعطيل التحديث التلقائي"
 }

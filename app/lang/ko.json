@@ -89,5 +89,14 @@
   "unpin_removed": "📌 `{name}` 고정 해제됨.",
   "unpin_not_found": "📌 `{name}`은(는) 고정되어 있지 않습니다.",
   "help_pin": "/pin — 컨테이너 고정",
-  "help_unpin": "/unpin — 고정 해제"
+  "help_unpin": "/unpin — 고정 해제",
+  "resolve_multiple": "여러 일치 항목: {names}. 더 구체적으로 입력하세요.",
+  "resolve_not_found": "컨테이너 `{name}`을(를) 찾을 수 없습니다.",
+  "autoupdate_list": "⚡ 자동 업데이트 컨테이너:",
+  "autoupdate_empty": "⚡ 자동 업데이트 컨테이너가 없습니다.",
+  "autoupdate_on": "⚡ `{name}` — 자동 업데이트 활성화.",
+  "autoupdate_off": "⚡ `{name}` — 자동 업데이트 비활성화.",
+  "autoupdate_running": "⚡ {count}개 컨테이너 자동 업데이트 중...",
+  "autoupdate_done": "⚡ 자동 업데이트 완료:",
+  "help_autoupdate": "/autoupdate — 자동 업데이트 전환"
 }

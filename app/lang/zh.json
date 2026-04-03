@@ -89,5 +89,14 @@
   "unpin_removed": "📌 `{name}` 已取消固定。",
   "unpin_not_found": "📌 `{name}` 未固定。",
   "help_pin": "/pin — 固定容器",
-  "help_unpin": "/unpin — 取消固定"
+  "help_unpin": "/unpin — 取消固定",
+  "resolve_multiple": "多个匹配: {names}。请更具体地指定。",
+  "resolve_not_found": "未找到容器 `{name}`。",
+  "autoupdate_list": "⚡ 自动更新容器：",
+  "autoupdate_empty": "⚡ 没有自动更新容器。",
+  "autoupdate_on": "⚡ `{name}` — 自动更新已启用。",
+  "autoupdate_off": "⚡ `{name}` — 自动更新已禁用。",
+  "autoupdate_running": "⚡ 正在自动更新 {count} 个容器...",
+  "autoupdate_done": "⚡ 自动更新完成：",
+  "help_autoupdate": "/autoupdate — 切换自动更新"
 }

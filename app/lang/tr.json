@@ -89,5 +89,14 @@
   "unpin_removed": "📌 `{name}` sabitlemesi kaldırıldı.",
   "unpin_not_found": "📌 `{name}` sabitlenmemiş.",
   "help_pin": "/pin — Konteyner sabitle",
-  "help_unpin": "/unpin — Sabitlemeyi kaldır"
+  "help_unpin": "/unpin — Sabitlemeyi kaldır",
+  "resolve_multiple": "Birden fazla eşleşme: {names}. Daha spesifik olun.",
+  "resolve_not_found": "Konteyner `{name}` bulunamadı.",
+  "autoupdate_list": "⚡ Otomatik güncelleme konteynerleri:",
+  "autoupdate_empty": "⚡ Otomatik güncelleme için konteyner yok.",
+  "autoupdate_on": "⚡ `{name}` — otomatik güncelleme açık.",
+  "autoupdate_off": "⚡ `{name}` — otomatik güncelleme kapalı.",
+  "autoupdate_running": "⚡ {count} konteyner otomatik güncelleniyor...",
+  "autoupdate_done": "⚡ Otomatik güncelleme tamamlandı:",
+  "help_autoupdate": "/autoupdate — Otomatik güncellemeyi aç/kapat"
 }

@@ -89,5 +89,14 @@
   "unpin_removed": "📌 `{name}` desfixado — será incluído nas atualizações.",
   "unpin_not_found": "📌 `{name}` não está fixado.",
   "help_pin": "/pin — Fixar contêiner",
-  "help_unpin": "/unpin — Desfixar contêiner"
+  "help_unpin": "/unpin — Desfixar contêiner",
+  "resolve_multiple": "Várias correspondências: {names}. Seja mais específico.",
+  "resolve_not_found": "Contêiner `{name}` não encontrado.",
+  "autoupdate_list": "⚡ Contêineres com auto-atualização:",
+  "autoupdate_empty": "⚡ Nenhum contêiner com auto-atualização.",
+  "autoupdate_on": "⚡ `{name}` — auto-atualização ativada.",
+  "autoupdate_off": "⚡ `{name}` — auto-atualização desativada.",
+  "autoupdate_running": "⚡ Auto-atualizando {count} contêiner(es)...",
+  "autoupdate_done": "⚡ Auto-atualização concluída:",
+  "help_autoupdate": "/autoupdate — Ativar/desativar auto-atualização"
 }

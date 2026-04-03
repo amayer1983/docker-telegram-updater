@@ -76,7 +76,7 @@ class Scheduler:
                 try:
                     updates = self.checker.check_all()
                     if updates:
-                        self.bot.notify_updates(updates)
+                        self.bot.handle_autoupdates(updates, self.checker)
                     # If no updates, stay quiet (--quiet behavior)
                 except Exception as e:
                     print(f"Scheduled check error: {e}")

@@ -89,5 +89,14 @@
   "unpin_removed": "📌 `{name}` entpinnt — wird wieder bei Updates berücksichtigt.",
   "unpin_not_found": "📌 `{name}` ist nicht gepinnt.",
   "help_pin": "/pin — Container pinnen (Updates überspringen)",
-  "help_unpin": "/unpin — Container entpinnen"
+  "help_unpin": "/unpin — Container entpinnen",
+  "resolve_multiple": "Mehrere Treffer: {names}. Bitte genauer angeben.",
+  "resolve_not_found": "Container `{name}` nicht gefunden.",
+  "autoupdate_list": "⚡ Auto-Update-Container:",
+  "autoupdate_empty": "⚡ Keine Container für Auto-Update eingerichtet.",
+  "autoupdate_on": "⚡ `{name}` — Auto-Update aktiviert.",
+  "autoupdate_off": "⚡ `{name}` — Auto-Update deaktiviert.",
+  "autoupdate_running": "⚡ Auto-Update für {count} Container läuft...",
+  "autoupdate_done": "⚡ Auto-Update abgeschlossen:",
+  "help_autoupdate": "/autoupdate — Auto-Update pro Container umschalten"
 }

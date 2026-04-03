@@ -34,6 +34,40 @@ class TelegramBot:
         with open(self.config.pinned_file, "w") as f:
             json.dump(pinned, f)
 
+    def _get_autoupdate(self):
+        if os.path.exists(self.config.autoupdate_file):
+            try:
+                with open(self.config.autoupdate_file) as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                pass
+        return []
+
+    def _save_autoupdate(self, containers):
+        with open(self.config.autoupdate_file, "w") as f:
+            json.dump(containers, f)
+
+    def _resolve_container(self, partial):
+        """Resolve a partial container name. Returns (full_name, error_msg)."""
+        result = subprocess.run(
+            ["docker", "ps", "--format", "{{.Names}}"],
+            capture_output=True, text=True
+        )
+        all_names = [n.strip() for n in result.stdout.strip().split("\n") if n.strip()]
+
+        # Exact match first
+        if partial in all_names:
+            return partial, None
+
+        # Partial match (starts with)
+        matches = [n for n in all_names if n.lower().startswith(partial.lower())]
+        if len(matches) == 1:
+            return matches[0], None
+        elif len(matches) > 1:
+            return None, self.t("resolve_multiple", names=", ".join(f"`{m}`" for m in matches))
+        else:
+            return None, self.t("resolve_not_found", name=partial)
+
     def api_call(self, method, data=None):
         url = f"https://api.telegram.org/bot{self.config.bot_token}/{method}"
         if data:
@@ -139,6 +173,34 @@ class TelegramBot:
 
         if not remaining:
             self.send_message(self.t("update_all_done"))
+
+    def handle_autoupdates(self, updates, checker):
+        """Split updates into auto-update and manual, handle accordingly."""
+        auto_list = self._get_autoupdate()
+        auto_updates = [u for u in updates if u["name"] in auto_list]
+        manual_updates = [u for u in updates if u["name"] not in auto_list]
+
+        # Auto-update containers silently
+        if auto_updates:
+            self.send_message(self.t("autoupdate_running", count=len(auto_updates)))
+            results = []
+            for u in auto_updates:
+                try:
+                    success, msg = checker.update_container(u["name"], u["image"])
+                    status = "✅" if success else "❌"
+                    results.append(f"{status} `{u['name']}`: {msg}")
+                except Exception as e:
+                    results.append(f"❌ `{u['name']}`: {str(e)[:200]}")
+            self.send_message(self.t("autoupdate_done") + "\n\n" + "\n".join(results))
+
+            # Remove auto-updated from pending
+            remaining = [u for u in updates if u["name"] not in [a["name"] for a in auto_updates]]
+            with open(self.config.pending_file, "w") as f:
+                json.dump(remaining, f)
+
+        # Notify about remaining manual updates
+        if manual_updates:
+            self.notify_updates(manual_updates)
 
     def notify_updates(self, updates):
         if not updates:
@@ -557,7 +619,6 @@ class TelegramBot:
         elif text.startswith("/pin"):
             parts = text.split()
             if len(parts) < 2:
-                # Show pinned list
                 pinned = self._get_pinned()
                 if pinned:
                     names = [f"• `{n}`" for n in pinned]
@@ -565,7 +626,10 @@ class TelegramBot:
                 else:
                     self.send_message(self.t("pin_empty"))
                 return
-            name = parts[1]
+            name, err = self._resolve_container(parts[1])
+            if err:
+                self.send_message(err)
+                return
             pinned = self._get_pinned()
             if name not in pinned:
                 pinned.append(name)
@@ -579,14 +643,47 @@ class TelegramBot:
             if len(parts) < 2:
                 self.send_message(self.t("unpin_usage"))
                 return
-            name = parts[1]
+            # For unpin, match against pinned list too
+            partial = parts[1]
             pinned = self._get_pinned()
-            if name in pinned:
-                pinned.remove(name)
-                self._save_pinned(pinned)
-                self.send_message(self.t("unpin_removed", name=name))
+            matches = [n for n in pinned if n.lower().startswith(partial.lower())]
+            if partial in pinned:
+                name = partial
+            elif len(matches) == 1:
+                name = matches[0]
+            elif len(matches) > 1:
+                self.send_message(self.t("resolve_multiple", names=", ".join(f"`{m}`" for m in matches)))
+                return
             else:
-                self.send_message(self.t("unpin_not_found", name=name))
+                self.send_message(self.t("unpin_not_found", name=partial))
+                return
+            pinned.remove(name)
+            self._save_pinned(pinned)
+            self.send_message(self.t("unpin_removed", name=name))
+
+        elif text.startswith("/autoupdate"):
+            parts = text.split()
+            if len(parts) < 2:
+                auto_list = self._get_autoupdate()
+                if auto_list:
+                    names = [f"• `{n}`" for n in auto_list]
+                    self.send_message(self.t("autoupdate_list") + "\n" + "\n".join(names))
+                else:
+                    self.send_message(self.t("autoupdate_empty"))
+                return
+            name, err = self._resolve_container(parts[1])
+            if err:
+                self.send_message(err)
+                return
+            auto_list = self._get_autoupdate()
+            if name in auto_list:
+                auto_list.remove(name)
+                self._save_autoupdate(auto_list)
+                self.send_message(self.t("autoupdate_off", name=name))
+            else:
+                auto_list.append(name)
+                self._save_autoupdate(auto_list)
+                self.send_message(self.t("autoupdate_on", name=name))
 
         elif text == "/settings":
             debug_status = self.t("debug_on") if self.config.debug else self.t("debug_off")
@@ -598,7 +695,8 @@ class TelegramBot:
                 + f"🔄 Auto-Selfupdate: {auto_su}\n"
                 + f"🔍 Debug: {debug_status}\n"
                 + f"🚫 Exclude: `{', '.join(self.config.exclude_containers) or '-'}`\n"
-                + f"📌 Pinned: `{', '.join(self._get_pinned()) or '-'}`"
+                + f"📌 Pinned: `{', '.join(self._get_pinned()) or '-'}`\n"
+                + f"⚡ Auto-Update: `{', '.join(self._get_autoupdate()) or '-'}`"
             )
 
         elif text == "/help" or text == "/start":
@@ -612,6 +710,7 @@ class TelegramBot:
                 + self.t("help_history") + "\n"
                 + self.t("help_pin") + "\n"
                 + self.t("help_unpin") + "\n"
+                + self.t("help_autoupdate") + "\n"
                 + self.t("help_selfupdate") + "\n"
                 + self.t("help_debug") + "\n"
                 + self.t("help_lang") + "\n"
