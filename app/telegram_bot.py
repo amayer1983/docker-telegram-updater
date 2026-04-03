@@ -160,7 +160,8 @@ class TelegramBot:
         self.send_message(self.t("update_single_starting", name=container_name))
 
         try:
-            success, msg = checker.update_container(target["name"], target["image"])
+            compose_kwargs = {k: target[k] for k in target if k.startswith("compose_")}
+            success, msg = checker.update_container(target["name"], target["image"], **compose_kwargs)
             status = "✅" if success else "❌"
             self.send_message(f"{status} `{container_name}`: {msg}")
         except Exception as e:
@@ -186,7 +187,8 @@ class TelegramBot:
             results = []
             for u in auto_updates:
                 try:
-                    success, msg = checker.update_container(u["name"], u["image"])
+                    compose_kwargs = {k: u[k] for k in u if k.startswith("compose_")}
+                    success, msg = checker.update_container(u["name"], u["image"], **compose_kwargs)
                     status = "✅" if success else "❌"
                     results.append(f"{status} `{u['name']}`: {msg}")
                 except Exception as e:
@@ -209,7 +211,8 @@ class TelegramBot:
         for u in updates:
             size = u.get('size', '?')
             created = u.get('created', '?')
-            names.append(f"• `{u['name']}` ({u['image']})\n  📦 {size} | 📅 {self.t('current')}: {created}")
+            compose_tag = " 🐳" if u.get("compose_project") else ""
+            names.append(f"• `{u['name']}` ({u['image']}){compose_tag}\n  📦 {size} | 📅 {self.t('current')}: {created}")
         text = self.t("updates_available") + "\n\n" + "\n".join(names)
 
         # One button per container + all/skip at the bottom
@@ -441,7 +444,8 @@ class TelegramBot:
         results = []
         for u in updates:
             try:
-                success, msg = updater.update_container(u["name"], u["image"])
+                compose_kwargs = {k: u[k] for k in u if k.startswith("compose_")}
+                success, msg = updater.update_container(u["name"], u["image"], **compose_kwargs)
                 status = "✅" if success else "❌"
                 results.append(f"{status} `{u['name']}`: {msg}")
             except Exception as e:

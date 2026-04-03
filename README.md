@@ -28,6 +28,7 @@ Monitor your Docker containers for image updates and manage them directly via Te
 - **Multi-language** — 16 languages included, switch via `/lang` or add your own
 - **Optional Web UI** — dashboard with status, history, and settings, password-protected
 - **Works with and without Docker Hub login** — credentials are optional
+- **Docker Compose support** — detects Compose stacks and uses native `docker compose pull/up` for updates
 - **Lightweight** — Python standard library only, no extra dependencies
 - **Docker-native** — runs as a container, manages containers via Docker socket
 
@@ -266,13 +267,36 @@ volumes:
   - ./my-languages:/app/lang
 ```
 
+## Docker Compose Support
+
+The bot automatically detects containers managed by Docker Compose via container labels. When updating a Compose-managed container, the bot uses the native Compose workflow:
+
+1. `docker compose pull <service>` — pulls the new image
+2. `docker compose up -d --no-deps <service>` — recreates only the updated service
+3. Health check and automatic rollback on failure
+
+This preserves all Compose-specific configuration (depends_on, networks, deploy settings) that would be lost with a plain `docker run` recreation.
+
+**Requirements:** The Compose file must be accessible from inside the bot container. Mount the directory containing your `docker-compose.yml`:
+
+```yaml
+volumes:
+  - /var/run/docker.sock:/var/run/docker.sock
+  - updater_data:/data
+  - /path/to/your/stacks:/stacks:ro
+```
+
+If the Compose file is not accessible (e.g. Portainer-managed stacks stored in a database), the bot automatically falls back to the standard `docker run` recreation method.
+
+Compose-managed containers are marked with a 🐳 icon in update notifications.
+
 ## How It Works
 
 1. On the configured schedule, the bot compares local image digests with remote registry digests via the Docker Registry HTTP API
 2. Pinned containers and containers in `EXCLUDE_CONTAINERS` are skipped
 3. If updates are found, containers on the auto-update list are updated immediately
 4. Remaining updates are sent as a Telegram notification with inline action buttons
-5. When you press update, the bot pulls the new image, recreates the container, and runs a health check
+5. When you press update, the bot uses **Docker Compose** (if detected) or **docker run** to recreate the container, then runs a health check
 6. If recreation or health check fails, the old container is automatically restored (rollback)
 7. All updates (success and failure) are logged to the update history
 

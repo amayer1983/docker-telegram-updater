@@ -56,7 +56,9 @@ class UpdateChecker:
             if name in self._get_pinned():
                 self._debug(f"  Skipped (pinned): {name}")
                 continue
-            containers.append({"name": name, "image": image})
+            # Detect Docker Compose
+            compose_info = self._get_compose_info(name)
+            containers.append({"name": name, "image": image, **compose_info})
         return containers
 
     def _parse_image(self, image):
@@ -185,6 +187,33 @@ class UpdateChecker:
             return created
         return "?"
 
+    def _get_compose_info(self, name):
+        """Detect if container belongs to a Docker Compose stack."""
+        result = subprocess.run(
+            ["docker", "inspect", "--format",
+             "{{index .Config.Labels \"com.docker.compose.project\"}}||"
+             "{{index .Config.Labels \"com.docker.compose.service\"}}||"
+             "{{index .Config.Labels \"com.docker.compose.project.config_files\"}}||"
+             "{{index .Config.Labels \"com.docker.compose.project.working_dir\"}}",
+             name],
+            capture_output=True, text=True
+        )
+        if result.returncode != 0:
+            return {}
+        parts = result.stdout.strip().split("||")
+        project = parts[0] if len(parts) > 0 else ""
+        service = parts[1] if len(parts) > 1 else ""
+        config_file = parts[2] if len(parts) > 2 else ""
+        working_dir = parts[3] if len(parts) > 3 else ""
+        if not project:
+            return {}
+        return {
+            "compose_project": project,
+            "compose_service": service,
+            "compose_file": config_file,
+            "compose_dir": working_dir,
+        }
+
     def _get_pinned(self):
         """Get list of pinned (frozen) container names."""
         if os.path.exists(self.config.pinned_file):
@@ -216,6 +245,31 @@ class UpdateChecker:
         history = history[-100:]
         with open(self.config.history_file, "w") as f:
             json.dump(history, f, indent=2)
+
+    def _wait_healthy(self, name, attempts=6, interval=5):
+        """Wait for container to become healthy. Returns (healthy, state, health)."""
+        for i in range(attempts):
+            time.sleep(interval)
+            sc = subprocess.run(
+                ["docker", "inspect", "--format", "{{.State.Status}}", name],
+                capture_output=True, text=True
+            )
+            state = sc.stdout.strip() if sc.returncode == 0 else ""
+            hc = subprocess.run(
+                ["docker", "inspect", "--format", "{{.State.Health.Status}}", name],
+                capture_output=True, text=True
+            )
+            health = hc.stdout.strip() if hc.returncode == 0 else ""
+            self._debug(f"  Health check [{i+1}/{attempts}]: state={state}, health={health}")
+            if state != "running":
+                return False, state, health
+            if not health or health == "<no value>":
+                return True, state, health
+            elif health == "healthy":
+                return True, state, health
+            elif health == "unhealthy":
+                return False, state, health
+        return False, state, health
 
     def check_all(self, bot=None):
         self.debug_log = []
@@ -269,7 +323,68 @@ class UpdateChecker:
 
         return updates
 
-    def update_container(self, name, image):
+    def update_container(self, name, image, compose_project=None, compose_service=None,
+                         compose_file=None, compose_dir=None, **kwargs):
+        # Try Compose update if container belongs to a stack
+        if compose_project and compose_service and compose_file:
+            return self._update_compose(name, image, compose_project, compose_service,
+                                        compose_file, compose_dir)
+
+        return self._update_standalone(name, image)
+
+    def _update_compose(self, name, image, project, service, config_file, working_dir):
+        """Update a container using Docker Compose."""
+        self._debug(f"Updating (compose): {name} (project={project}, service={service})...")
+
+        # Get old image info
+        old_created = self._get_image_created(image)
+
+        # Check if compose file is accessible
+        if not os.path.isfile(config_file):
+            self._debug(f"  Compose file not found: {config_file} — falling back to standalone")
+            return self._update_standalone(name, image)
+
+        # Pull new image via compose
+        pull_cmd = ["docker", "compose", "-f", config_file, "-p", project, "pull", service]
+        self._debug(f"  Running: docker compose -f {config_file} -p {project} pull {service}")
+        result = subprocess.run(pull_cmd, capture_output=True, text=True, timeout=1800)
+        if result.returncode != 0:
+            msg = f"Compose pull failed: {result.stderr[:200]}"
+            self._save_history(name, image, False, msg)
+            return False, msg
+
+        # Get new image info after pull
+        new_created = self._get_image_created(image)
+        new_size = self._get_image_size(image)
+
+        # Recreate service via compose
+        up_cmd = ["docker", "compose", "-f", config_file, "-p", project, "up", "-d", "--no-deps", service]
+        self._debug(f"  Running: docker compose -f {config_file} -p {project} up -d --no-deps {service}")
+        result = subprocess.run(up_cmd, capture_output=True, text=True, timeout=120)
+        if result.returncode != 0:
+            msg = f"Compose up failed: {result.stderr[:200]}"
+            self._save_history(name, image, False, msg)
+            return False, msg
+
+        # Health check
+        self._debug(f"  Health check: waiting for {name}...")
+        healthy, state, health = self._wait_healthy(name)
+
+        if not healthy:
+            # Rollback: recreate with old image
+            self._debug(f"  Health check FAILED — rolling back via compose")
+            subprocess.run(["docker", "compose", "-f", config_file, "-p", project,
+                            "up", "-d", "--no-deps", service],
+                           capture_output=True, text=True, timeout=120)
+            msg = f"Health check failed (state={state}, health={health}) — rolled back"
+            self._save_history(name, image, False, msg)
+            return False, msg
+
+        detail = f"📅 {old_created} → {new_created}, 📦 {new_size}"
+        self._save_history(name, image, True, f"compose: {detail}")
+        return True, f"OK ({detail})"
+
+    def _update_standalone(self, name, image):
         self._debug(f"Updating: {name} ({image})...")
 
         # Get old image info before pull
@@ -423,42 +538,7 @@ class UpdateChecker:
 
             # Health check: wait up to 30s for container to be running
             self._debug(f"  Health check: waiting for {name}...")
-            healthy = False
-            state = ""
-            health = ""
-            for i in range(6):
-                time.sleep(5)
-
-                # Get container state
-                sc = subprocess.run(
-                    ["docker", "inspect", "--format", "{{.State.Status}}", name],
-                    capture_output=True, text=True
-                )
-                state = sc.stdout.strip() if sc.returncode == 0 else ""
-
-                # Get health status (may fail if no healthcheck defined)
-                hc = subprocess.run(
-                    ["docker", "inspect", "--format", "{{.State.Health.Status}}", name],
-                    capture_output=True, text=True
-                )
-                health = hc.stdout.strip() if hc.returncode == 0 else ""
-
-                self._debug(f"  Health check [{i+1}/6]: state={state}, health={health}")
-
-                if state != "running":
-                    # Container crashed or exited
-                    break
-
-                if not health or health == "<no value>":
-                    # No healthcheck defined — running is good enough
-                    healthy = True
-                    break
-                elif health == "healthy":
-                    healthy = True
-                    break
-                elif health == "unhealthy":
-                    break
-                # "starting" → continue waiting
+            healthy, state, health = self._wait_healthy(name)
 
             if not healthy:
                 self._debug(f"  Health check FAILED for {name} — rolling back")
