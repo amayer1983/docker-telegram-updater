@@ -15,6 +15,8 @@ Monitor your Docker containers for image updates and manage them directly via Te
 - **Cleanup** — remove old unused images via `/cleanup`
 - **Debug mode** — toggle detailed diagnostics via `/debug`
 - **Auto-rollback** — failed updates automatically restore the previous container
+- **Multi-language** — 16 languages included, switch via `/lang` or add your own JSON file
+- **Optional Web UI** — dashboard with container status and settings, password-protected
 - **Works with and without Docker Hub login** — credentials are optional
 - **Lightweight** — Python standard library only, no extra dependencies
 - **Docker-native** — runs as a container, manages containers via Docker socket
@@ -108,6 +110,8 @@ volumes:
 | `/cleanup` | Remove old unused Docker images |
 | `/selfupdate` | Update the bot itself to the latest version |
 | `/debug` | Toggle debug mode for detailed diagnostics |
+| `/lang` | Switch language (e.g. `/lang en`, `/lang de`) |
+| `/settings` | Show current configuration |
 | `/help` | Show available commands |
 
 ## Update Workflow
@@ -115,21 +119,21 @@ volumes:
 When updates are found, you receive a message with image sizes, dates, and buttons:
 
 ```
-🔄 Docker Updates verfügbar
+🔄 Docker Updates Available
 
 • nginx (nginx:latest)
-  📦 141 MB | 📅 Aktuell: 2026-03-15
+  📦 141 MB | 📅 Current: 2026-03-15
 • redis (redis:7)
-  📦 117 MB | 📅 Aktuell: 2026-03-20
+  📦 117 MB | 📅 Current: 2026-03-20
 
 [🔄 nginx (141 MB)]
 [🔄 redis (117 MB)]
-[🚀 Alle updaten] [✋ Manuell]
+[🚀 Update all] [✋ Manual]
 ```
 
 - **Individual buttons** — update a single container, button changes to ✅ when done
-- **🚀 Alle updaten** — pull and restart all containers at once
-- **✋ Manuell** — dismiss and handle updates yourself
+- **🚀 Update all** — pull and restart all containers at once
+- **✋ Manual** — dismiss and handle updates yourself
 
 The bot recreates containers with the same configuration (ports, volumes, environment, labels, networks). If an update fails, it automatically rolls back to the previous container.
 
@@ -142,6 +146,10 @@ The bot recreates containers with the same configuration (ports, volumes, enviro
 | `CRON_SCHEDULE` | `0 18 * * *` | Cron expression for scheduled checks |
 | `EXCLUDE_CONTAINERS` | | Comma-separated container names to exclude |
 | `AUTO_SELFUPDATE` | `false` | Automatically update the bot on each scheduled check |
+| `LANGUAGE` | `en` | Bot language (`en`, `de`, `fr`, `es`, `it`, `nl`, `pt`, `pl`, `tr`, `ru`, `uk`, `ar`, `hi`, `ja`, `ko`, `zh`) |
+| `WEB_UI` | `false` | Enable optional web dashboard |
+| `WEB_PORT` | `8080` | Web UI port (inside container) |
+| `WEB_PASSWORD` | | Password for Web UI (Basic Auth). Leave empty for no protection |
 | `TZ` | `Europe/Berlin` | Timezone for scheduling |
 
 ### Cron Schedule Examples
@@ -170,6 +178,49 @@ volumes:
 ```
 
 If the credentials file doesn't exist, simply leave out this line — the bot works fine without it.
+
+## Web UI (Optional)
+
+Enable a lightweight web dashboard for status overview and settings:
+
+```bash
+docker run -d \
+  --name docker-telegram-updater \
+  -e BOT_TOKEN=your-bot-token \
+  -e CHAT_ID=your-chat-id \
+  -e WEB_UI=true \
+  -e WEB_PASSWORD=your-secret \
+  -p 8080:8080 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  amayer1983/docker-telegram-updater:latest
+```
+
+The Web UI is **disabled by default** to keep the container minimal. When enabled, it provides:
+- **Status page** — live container overview with health badges
+- **Settings page** — change language, debug mode, and auto-selfupdate via browser
+- **Update check** — trigger a check from the dashboard
+
+Access it at `http://your-server:8080` with the configured password.
+
+## Multi-Language
+
+16 languages are included out of the box:
+
+🇬🇧 English · 🇩🇪 Deutsch · 🇫🇷 Français · 🇪🇸 Español · 🇮🇹 Italiano · 🇳🇱 Nederlands · 🇧🇷 Português · 🇵🇱 Polski · 🇹🇷 Türkçe · 🇷🇺 Русский · 🇺🇦 Українська · 🇸🇦 العربية · 🇮🇳 हिन्दी · 🇯🇵 日本語 · 🇰🇷 한국어 · 🇨🇳 中文
+
+**Switch language:**
+- Via Telegram: `/lang de`, `/lang fr`, etc.
+- Via Web UI: Settings page
+- Via environment variable: `LANGUAGE=de`
+
+**Add your own language:**
+
+Create a JSON file in the `lang/` directory (e.g. `sv.json` for Swedish) with all translation keys. Use `en.json` as a template. You can mount a custom lang directory:
+
+```yaml
+volumes:
+  - ./my-languages:/app/lang
+```
 
 ## How it works
 
