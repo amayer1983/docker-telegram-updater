@@ -39,7 +39,7 @@
   "debug_mode": "*Hata ayıklama modu:* {status}",
   "debug_on": "AÇIK 🔍",
   "debug_off": "KAPALI",
-  "help_title": "*Docker Telegram Updater v1.2.0* 🐳",
+  "help_title": "*Docker Telegram Updater v{version}* 🐳",
   "help_commands": "*Komutlar:*",
   "help_status": "/status — Konteyner durumunu göster",
   "help_check": "/check — Güncellemeleri kontrol et",

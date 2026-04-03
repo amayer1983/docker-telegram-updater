@@ -39,7 +39,7 @@
   "debug_mode": "*Tryb debugowania:* {status}",
   "debug_on": "WŁ 🔍",
   "debug_off": "WYŁ",
-  "help_title": "*Docker Telegram Updater v1.2.0* 🐳",
+  "help_title": "*Docker Telegram Updater v{version}* 🐳",
   "help_commands": "*Polecenia:*",
   "help_status": "/status — Pokaż status kontenerów",
   "help_check": "/check — Sprawdź aktualizacje",

@@ -39,7 +39,7 @@
   "debug_mode": "*Режим отладки:* {status}",
   "debug_on": "ВКЛ 🔍",
   "debug_off": "ВЫКЛ",
-  "help_title": "*Docker Telegram Updater v1.2.0* 🐳",
+  "help_title": "*Docker Telegram Updater v{version}* 🐳",
   "help_commands": "*Команды:*",
   "help_status": "/status — Показать статус контейнеров",
   "help_check": "/check — Проверить обновления",

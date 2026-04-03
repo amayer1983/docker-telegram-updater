@@ -39,7 +39,7 @@
   "debug_mode": "*Modo depuración:* {status}",
   "debug_on": "ACTIVADO 🔍",
   "debug_off": "DESACTIVADO",
-  "help_title": "*Docker Telegram Updater v1.2.0* 🐳",
+  "help_title": "*Docker Telegram Updater v{version}* 🐳",
   "help_commands": "*Comandos:*",
   "help_status": "/status — Mostrar estado de los contenedores",
   "help_check": "/check — Buscar actualizaciones",

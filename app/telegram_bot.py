@@ -700,8 +700,9 @@ class TelegramBot:
             )
 
         elif text == "/help" or text == "/start":
+            from version import VERSION
             self.send_message(
-                self.t("help_title") + "\n\n"
+                self.t("help_title", version=VERSION) + "\n\n"
                 + self.t("help_commands") + "\n"
                 + self.t("help_status") + "\n"
                 + self.t("help_check") + "\n"

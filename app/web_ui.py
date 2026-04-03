@@ -84,6 +84,7 @@ def create_handler(config, checker, bot, password=None):
 
         def _render_page(self, content, active="status"):
             from i18n import get_translator
+            from version import VERSION
             t = get_translator(config.language)
 
             nav_items = [
@@ -151,7 +152,7 @@ select {{ cursor: pointer; }}
 <div class="content">
 {content}
 </div>
-<div class="footer">Docker Telegram Updater v1.2.0</div>
+<div class="footer">Docker Telegram Updater v{VERSION}</div>
 </body>
 </html>"""
 
