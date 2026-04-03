@@ -6,6 +6,11 @@ Monitor your Docker containers for image updates and manage them directly via Te
 ![Docker Image Size](https://img.shields.io/docker/image-size/amayer1983/docker-telegram-updater)
 ![License](https://img.shields.io/github/license/amayer1983/docker-telegram-updater)
 
+<p align="center">
+  <img src="docs/images/telegram-update-notification.jpg" alt="Update Notification" width="350">
+  <img src="docs/images/telegram-update-result.jpg" alt="Update Result" width="350">
+</p>
+
 ## Features
 
 - **Automatic update detection** — compares local and remote image digests on a configurable cron schedule
@@ -92,6 +97,11 @@ Run `docker login` on your host first, then add this volume:
 
 ## Telegram Commands
 
+<p align="center">
+  <img src="docs/images/telegram-help.jpg" alt="Help Command" width="350">
+  <img src="docs/images/telegram-status.jpg" alt="Status Command" width="350">
+</p>
+
 ### Updates & Monitoring
 
 | Command | Description |
@@ -123,6 +133,10 @@ Run `docker login` on your host first, then add this volume:
 > **Partial name matching:** You don't need to type the full container name. `/pin ngi` will match `nginx` if it's the only container starting with "ngi". If multiple containers match, the bot shows all options.
 
 ## Update Workflow
+
+<p align="center">
+  <img src="docs/images/telegram-update-single.jpg" alt="Single Update" width="350">
+</p>
 
 When updates are found, you receive a Telegram message with image sizes, dates, and action buttons:
 
