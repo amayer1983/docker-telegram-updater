@@ -60,19 +60,89 @@ class TelegramBot:
             "reply_markup": json.dumps({"inline_keyboard": []})
         })
 
+    def _remove_single_button(self, chat_id, message_id, callback_data):
+        """Mark clicked button as done, keep remaining buttons."""
+        keyboard = self._rebuild_keyboard_without(callback_data)
+        self.api_call("editMessageReplyMarkup", {
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "reply_markup": json.dumps(keyboard)
+        })
+
+    def _rebuild_keyboard_without(self, callback_data):
+        """Rebuild keyboard marking the clicked container as done."""
+        if not os.path.exists(self.config.pending_file):
+            return {"inline_keyboard": []}
+
+        with open(self.config.pending_file) as f:
+            updates = json.load(f)
+
+        keyboard = []
+        for u in updates:
+            btn_data = f"update_one:{u['name']}"
+            if btn_data == callback_data:
+                keyboard.append([{"text": f"✅ {u['name']}", "callback_data": "noop"}])
+            else:
+                keyboard.append([{"text": f"🔄 {u['name']}", "callback_data": btn_data}])
+
+        remaining = [u for u in updates if f"update_one:{u['name']}" != callback_data]
+        if remaining:
+            keyboard.append([
+                {"text": "🚀 Alle updaten", "callback_data": "update_all"},
+                {"text": "✋ Manuell", "callback_data": "update_skip"}
+            ])
+
+        return {"inline_keyboard": keyboard}
+
+    def _run_single_update(self, checker, container_name):
+        """Update a single container."""
+        if not os.path.exists(self.config.pending_file):
+            self.send_message("⚠️ Keine ausstehenden Updates gefunden.")
+            return
+
+        with open(self.config.pending_file) as f:
+            updates = json.load(f)
+
+        target = next((u for u in updates if u["name"] == container_name), None)
+        if not target:
+            self.send_message(f"⚠️ Container `{container_name}` nicht in der Update-Liste.")
+            return
+
+        self.send_message(f"⏳ Update `{container_name}`...")
+
+        try:
+            success, msg = checker.update_container(target["name"], target["image"])
+            status = "✅" if success else "❌"
+            self.send_message(f"{status} `{container_name}`: {msg}")
+        except Exception as e:
+            self.send_message(f"❌ `{container_name}`: {str(e)[:200]}")
+
+        # Remove from pending list
+        remaining = [u for u in updates if u["name"] != container_name]
+        with open(self.config.pending_file, "w") as f:
+            json.dump(remaining, f)
+
+        if not remaining:
+            self.send_message("✅ Alle Updates abgeschlossen.")
+
     def notify_updates(self, updates):
         if not updates:
             return
         names = [f"• `{u['name']}` ({u['image']})" for u in updates]
         text = "🔄 *Docker Updates verfügbar*\n\n" + "\n".join(names)
-        reply_markup = {
-            "inline_keyboard": [
-                [
-                    {"text": "🚀 Alle updaten", "callback_data": "update_all"},
-                    {"text": "✋ Manuell", "callback_data": "update_skip"}
-                ]
-            ]
-        }
+
+        # One button per container + all/skip at the bottom
+        keyboard = []
+        for u in updates:
+            keyboard.append([
+                {"text": f"🔄 {u['name']}", "callback_data": f"update_one:{u['name']}"}
+            ])
+        keyboard.append([
+            {"text": "🚀 Alle updaten", "callback_data": "update_all"},
+            {"text": "✋ Manuell", "callback_data": "update_skip"}
+        ])
+
+        reply_markup = {"inline_keyboard": keyboard}
         self.send_message(text, reply_markup)
 
     def notify_no_updates(self):
@@ -291,20 +361,29 @@ class TelegramBot:
             self.answer_callback(callback["id"], "Nicht autorisiert.")
             return
 
-        if msg_id and chat_id:
-            self.remove_buttons(chat_id, msg_id)
-
         if data == "update_all":
+            if msg_id and chat_id:
+                self.remove_buttons(chat_id, msg_id)
             self.answer_callback(callback["id"], "Updates werden gestartet...")
             t = threading.Thread(target=self.run_updates, args=(checker,))
             t.start()
         elif data == "update_skip":
+            if msg_id and chat_id:
+                self.remove_buttons(chat_id, msg_id)
             self.answer_callback(callback["id"], "OK, manuell.")
             self.send_message("👍 Updates werden nicht automatisch durchgeführt.")
             try:
                 os.remove(self.config.pending_file)
             except OSError:
                 pass
+        elif data.startswith("update_one:"):
+            container_name = data.split(":", 1)[1]
+            self.answer_callback(callback["id"], f"Update {container_name}...")
+            # Remove only this button, keep the rest
+            if msg_id and chat_id:
+                self._remove_single_button(chat_id, msg_id, data)
+            t = threading.Thread(target=self._run_single_update, args=(checker, container_name))
+            t.start()
 
     def _handle_message(self, message, checker, scheduler):
         text = message.get("text", "")
