@@ -128,14 +128,19 @@ class TelegramBot:
     def notify_updates(self, updates):
         if not updates:
             return
-        names = [f"• `{u['name']}` ({u['image']})" for u in updates]
+        names = []
+        for u in updates:
+            size = u.get('size', '?')
+            created = u.get('created', '?')
+            names.append(f"• `{u['name']}` ({u['image']})\n  📦 {size} | 📅 Aktuell: {created}")
         text = "🔄 *Docker Updates verfügbar*\n\n" + "\n".join(names)
 
         # One button per container + all/skip at the bottom
         keyboard = []
         for u in updates:
+            size = u.get('size', '?')
             keyboard.append([
-                {"text": f"🔄 {u['name']}", "callback_data": f"update_one:{u['name']}"}
+                {"text": f"🔄 {u['name']} ({size})", "callback_data": f"update_one:{u['name']}"}
             ])
         keyboard.append([
             {"text": "🚀 Alle updaten", "callback_data": "update_all"},
@@ -168,7 +173,11 @@ class TelegramBot:
         own_name = config["Name"].lstrip("/")
         own_image = config["Config"]["Image"]
 
-        self.send_message(f"🔄 Prüfe Update für `{own_image}`...")
+        # Get current image info
+        old_created = config.get("Created", "")[:10]
+        old_id_short = config["Image"][:19]
+
+        self.send_message(f"🔄 Prüfe Update für `{own_image}`...\n📅 Aktuelle Version: {old_created}\n🆔 Image: `{old_id_short}`")
 
         # Pull latest
         pull = subprocess.run(
@@ -181,17 +190,25 @@ class TelegramBot:
 
         # Check if image actually changed
         new_inspect = subprocess.run(
-            ["docker", "inspect", "--format", "{{.Id}}", own_image],
+            ["docker", "inspect", "--format", "{{.Id}}||{{.Created}}", own_image],
             capture_output=True, text=True
         )
-        new_id = new_inspect.stdout.strip()
+        parts = new_inspect.stdout.strip().split("||")
+        new_id = parts[0]
+        new_created = parts[1][:10] if len(parts) > 1 else "?"
         old_id = config["Image"]
 
         if new_id == old_id:
             self.send_message("✅ Bereits auf dem neuesten Stand.")
             return
 
-        self.send_message("⏳ Neues Image gefunden. Starte Self-Update...\nBot wird kurz offline sein.")
+        new_id_short = new_id[:19]
+        self.send_message(
+            f"⏳ *Neues Image gefunden!*\n"
+            f"📅 Neu: {new_created} | Alt: {old_created}\n"
+            f"🆔 `{old_id_short}` → `{new_id_short}`\n\n"
+            f"Starte Self-Update... Bot wird kurz offline sein."
+        )
 
         # Create update script that runs after this container stops
         # The script: rename old, create new with same config, remove old
@@ -441,7 +458,7 @@ class TelegramBot:
 
         elif text == "/help" or text == "/start":
             self.send_message(
-                "*Docker Telegram Updater v1.1.0* 🐳\n\n"
+                "*Docker Telegram Updater v1.2.0* 🐳\n\n"
                 "*Befehle:*\n"
                 "/status — Container-Status anzeigen\n"
                 "/check — Jetzt auf Updates prüfen\n"

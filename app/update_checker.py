@@ -150,6 +150,36 @@ class UpdateChecker:
             return result.stdout.strip().split("@")[1]
         return None
 
+    def _get_image_size(self, image):
+        """Get local image size in human-readable format."""
+        result = subprocess.run(
+            ["docker", "image", "inspect", "--format", "{{.Size}}", image],
+            capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            try:
+                size_bytes = int(result.stdout.strip())
+                if size_bytes >= 1073741824:
+                    return f"{size_bytes / 1073741824:.1f} GB"
+                elif size_bytes >= 1048576:
+                    return f"{size_bytes / 1048576:.0f} MB"
+                else:
+                    return f"{size_bytes / 1024:.0f} KB"
+            except ValueError:
+                pass
+        return "?"
+
+    def _get_image_created(self, image):
+        """Get image creation date."""
+        result = subprocess.run(
+            ["docker", "image", "inspect", "--format", "{{.Created}}", image],
+            capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            created = result.stdout.strip()[:10]  # Just the date part
+            return created
+        return "?"
+
     def check_all(self, bot=None):
         self.debug_log = []
         containers = self.get_running_containers()
@@ -177,7 +207,11 @@ class UpdateChecker:
             self._debug(f"  Remote: {(remote_digest or 'FAILED')[:30]}...")
 
             if remote_digest and local_digest != remote_digest:
-                self._debug(f"  → UPDATE AVAILABLE")
+                size = self._get_image_size(image)
+                created = self._get_image_created(image)
+                self._debug(f"  → UPDATE AVAILABLE (current: {created}, size: {size})")
+                c["size"] = size
+                c["created"] = created
                 updates.append(c)
             else:
                 self._debug(f"  → Up to date")
@@ -201,6 +235,15 @@ class UpdateChecker:
     def update_container(self, name, image):
         self._debug(f"Updating: {name} ({image})...")
 
+        # Get old image info before pull
+        old_created = "?"
+        old_inspect = subprocess.run(
+            ["docker", "image", "inspect", "--format", "{{.Created}}", image],
+            capture_output=True, text=True
+        )
+        if old_inspect.returncode == 0:
+            old_created = old_inspect.stdout.strip()[:10]
+
         # Pull new image
         result = subprocess.run(
             ["docker", "pull", image],
@@ -211,7 +254,29 @@ class UpdateChecker:
                 return False, "Rate limit erreicht. `docker login` auf dem Host ausführen und Credentials mounten."
             return False, f"Pull failed: {result.stderr[:200]}"
 
-        self._debug(f"  Pull OK: {name}")
+        # Get new image info after pull
+        new_created = "?"
+        new_size = "?"
+        new_inspect = subprocess.run(
+            ["docker", "image", "inspect", "--format", "{{.Created}}||{{.Size}}", image],
+            capture_output=True, text=True
+        )
+        if new_inspect.returncode == 0:
+            parts = new_inspect.stdout.strip().split("||")
+            new_created = parts[0][:10]
+            if len(parts) > 1:
+                try:
+                    size_bytes = int(parts[1])
+                    if size_bytes >= 1073741824:
+                        new_size = f"{size_bytes / 1073741824:.1f} GB"
+                    elif size_bytes >= 1048576:
+                        new_size = f"{size_bytes / 1048576:.0f} MB"
+                    else:
+                        new_size = f"{size_bytes / 1024:.0f} KB"
+                except ValueError:
+                    pass
+
+        self._debug(f"  Pull OK: {name} ({old_created} → {new_created}, {new_size})")
 
         # Recreate container: stop, rename old, create new with same config, start, remove old
         try:
@@ -317,7 +382,7 @@ class UpdateChecker:
             subprocess.run(["docker", "rm", old_name], capture_output=True, timeout=30)
             self._debug(f"  Recreated successfully: {name}")
 
-            return True, "OK"
+            return True, f"OK (📅 {old_created} → {new_created}, 📦 {new_size})"
 
         except Exception as e:
             self._debug(f"  Error: {str(e)[:200]}")
