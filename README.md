@@ -232,6 +232,16 @@ The Web UI is **disabled by default** to keep the container minimal. When enable
 
 The Web UI is fully translated — it follows the configured language.
 
+<p align="center">
+  <img src="docs/images/webui-status.png" alt="Web UI Status" width="700">
+</p>
+<p align="center">
+  <img src="docs/images/webui-history.png" alt="Web UI History" width="700">
+</p>
+<p align="center">
+  <img src="docs/images/webui-settings.png" alt="Web UI Settings" width="700">
+</p>
+
 Access it at `http://your-server:8080` with the configured password.
 
 ## Multi-Language
