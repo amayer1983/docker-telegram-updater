@@ -81,4 +81,11 @@ class Scheduler:
                 except Exception as e:
                     print(f"Scheduled check error: {e}")
 
+                # Auto selfupdate after regular check
+                if self.config.auto_selfupdate:
+                    try:
+                        self.bot.check_selfupdate_auto()
+                    except Exception as e:
+                        print(f"Auto selfupdate error: {e}")
+
             time.sleep(30)

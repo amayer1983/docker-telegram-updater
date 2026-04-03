@@ -39,6 +39,7 @@ def main():
     print(f"Docker Telegram Updater started.")
     print(f"Schedule: {config.cron_schedule}")
     print(f"Excluded: {config.exclude_containers or 'none'}")
+    print(f"Auto selfupdate: {'ON' if config.auto_selfupdate else 'OFF'}")
 
     # Start bot listener (blocking)
     bot.listen(checker, scheduler)

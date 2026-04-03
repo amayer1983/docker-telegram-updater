@@ -11,7 +11,7 @@ Monitor your Docker containers for image updates and manage them directly via Te
 - **Automatic update detection** — compares local and remote image digests on a configurable schedule
 - **Telegram notifications** — get notified when updates are available
 - **Per-container or bulk updates** — update individual containers or all at once with inline buttons
-- **Self-update** — the bot can update itself via `/selfupdate`
+- **Self-update** — the bot can update itself via `/selfupdate` or automatically with `AUTO_SELFUPDATE=true`
 - **Cleanup** — remove old unused images via `/cleanup`
 - **Debug mode** — toggle detailed diagnostics via `/debug`
 - **Auto-rollback** — failed updates automatically restore the previous container
@@ -112,16 +112,18 @@ volumes:
 
 ## Update Workflow
 
-When updates are found, you receive a message with buttons for each container:
+When updates are found, you receive a message with image sizes, dates, and buttons:
 
 ```
 🔄 Docker Updates verfügbar
 
 • nginx (nginx:latest)
+  📦 141 MB | 📅 Aktuell: 2026-03-15
 • redis (redis:7)
+  📦 117 MB | 📅 Aktuell: 2026-03-20
 
-[🔄 nginx       ]
-[🔄 redis       ]
+[🔄 nginx (141 MB)]
+[🔄 redis (117 MB)]
 [🚀 Alle updaten] [✋ Manuell]
 ```
 
@@ -139,6 +141,7 @@ The bot recreates containers with the same configuration (ports, volumes, enviro
 | `CHAT_ID` | *required* | Your Telegram chat ID |
 | `CRON_SCHEDULE` | `0 18 * * *` | Cron expression for scheduled checks |
 | `EXCLUDE_CONTAINERS` | | Comma-separated container names to exclude |
+| `AUTO_SELFUPDATE` | `false` | Automatically update the bot on each scheduled check |
 | `TZ` | `Europe/Berlin` | Timezone for scheduling |
 
 ### Cron Schedule Examples

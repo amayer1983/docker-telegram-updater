@@ -5,7 +5,7 @@ import os
 
 
 class Config:
-    def __init__(self, bot_token, chat_id, cron_schedule, exclude_containers, data_dir):
+    def __init__(self, bot_token, chat_id, cron_schedule, exclude_containers, data_dir, auto_selfupdate):
         self.bot_token = bot_token
         self.chat_id = chat_id
         self.cron_schedule = cron_schedule
@@ -13,6 +13,7 @@ class Config:
         self.data_dir = data_dir
         self.pending_file = os.path.join(data_dir, "pending_updates.json")
         self.debug = False
+        self.auto_selfupdate = auto_selfupdate
 
     @classmethod
     def from_env(cls):
@@ -25,4 +26,5 @@ class Config:
                 if c.strip()
             ],
             data_dir=os.environ.get("DATA_DIR", "/data"),
+            auto_selfupdate=os.environ.get("AUTO_SELFUPDATE", "false").lower() in ("true", "1", "yes"),
         )

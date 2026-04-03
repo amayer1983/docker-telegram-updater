@@ -210,8 +210,11 @@ class TelegramBot:
             f"Starte Self-Update... Bot wird kurz offline sein."
         )
 
+        self._do_selfupdate(config, own_name, own_image)
+
+    def _do_selfupdate(self, config, own_name, own_image):
+        """Execute selfupdate: rebuild run command from inspect, stop, recreate, exit."""
         # Create update script that runs after this container stops
-        # The script: rename old, create new with same config, remove old
         update_cmd = (
             f"docker stop {own_name} && "
             f"docker rename {own_name} {own_name}_old && "
@@ -283,6 +286,56 @@ class TelegramBot:
             start_new_session=True
         )
         sys.exit(0)
+
+    def check_selfupdate_auto(self):
+        """Automatic selfupdate check - triggered by scheduler when AUTO_SELFUPDATE=true."""
+        hostname = os.environ.get("HOSTNAME", "")
+        if not hostname:
+            return
+
+        result = subprocess.run(
+            ["docker", "inspect", hostname],
+            capture_output=True, text=True
+        )
+        if result.returncode != 0:
+            return
+
+        config = json.loads(result.stdout)[0]
+        own_image = config["Config"]["Image"]
+        old_id = config["Image"]
+        old_created = config.get("Created", "")[:10]
+
+        # Pull latest silently
+        pull = subprocess.run(
+            ["docker", "pull", own_image],
+            capture_output=True, text=True, timeout=300
+        )
+        if pull.returncode != 0:
+            return
+
+        # Check if image changed
+        new_inspect = subprocess.run(
+            ["docker", "inspect", "--format", "{{.Id}}||{{.Created}}", own_image],
+            capture_output=True, text=True
+        )
+        parts = new_inspect.stdout.strip().split("||")
+        new_id = parts[0]
+        new_created = parts[1][:10] if len(parts) > 1 else "?"
+
+        if new_id == old_id:
+            print("Auto selfupdate: already up to date.")
+            return
+
+        # Notify and update
+        own_name = config["Name"].lstrip("/")
+        self.send_message(
+            f"🔄 *Auto Self-Update*\n"
+            f"📅 {old_created} → {new_created}\n"
+            f"Starte Update... Bot wird kurz offline sein."
+        )
+
+        # Reuse the selfupdate logic
+        self._do_selfupdate(config, own_name, own_image)
 
     def run_updates(self, updater):
         if self.update_running:

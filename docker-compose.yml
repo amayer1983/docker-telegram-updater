@@ -8,6 +8,7 @@ services:
       - CHAT_ID=${CHAT_ID}
       - CRON_SCHEDULE=${CRON_SCHEDULE:-0 18 * * *}
       - EXCLUDE_CONTAINERS=${EXCLUDE_CONTAINERS:-}
+      - AUTO_SELFUPDATE=${AUTO_SELFUPDATE:-false}
       - TZ=${TZ:-Europe/Berlin}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
