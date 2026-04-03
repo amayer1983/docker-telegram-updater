@@ -87,8 +87,8 @@ def create_handler(config, checker, bot, password=None):
             t = get_translator(config.language)
 
             nav_items = [
-                ("status", "📊 Status", "/"),
-                ("settings", "⚙️ Settings", "/settings"),
+                ("status", f'📊 {t("web_nav_status")}', "/"),
+                ("settings", f'⚙️ {t("web_nav_settings")}', "/settings"),
             ]
             nav_html = ""
             for key, label, href in nav_items:
@@ -220,26 +220,29 @@ select {{ cursor: pointer; }}
 <td>{status_badge}</td>
 </tr>"""
 
+            from i18n import get_translator
+            t = get_translator(config.language)
+
             content = f"""
 <div class="grid">
 <div class="card stat">
     <div class="num">{len(containers)}</div>
-    <div class="label">Containers</div>
+    <div class="label">{t("web_containers")}</div>
 </div>
 <div class="card stat">
     <div class="num">{len(pending)}</div>
-    <div class="label">Updates Available</div>
+    <div class="label">{t("web_updates_available")}</div>
 </div>
 </div>
 
 <div class="card">
-<h2>🐳 Containers</h2>
+<h2>🐳 {t("web_containers")}</h2>
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-<span style="font-size:12px;color:#8b949e">{len(containers)} containers running</span>
-<a href="/api/check" class="btn btn-blue" style="text-decoration:none;font-size:13px">🔍 Check Updates</a>
+<span style="font-size:12px;color:#8b949e">{t("web_containers_running", count=len(containers))}</span>
+<a href="/api/check" class="btn btn-blue" style="text-decoration:none;font-size:13px">🔍 {t("web_check_updates")}</a>
 </div>
 <table>
-<tr><th>Name</th><th>Image</th><th>Status</th></tr>
+<tr><th>{t("web_name")}</th><th>{t("web_image")}</th><th>{t("web_status")}</th></tr>
 {rows}
 </table>
 </div>"""
@@ -247,10 +250,12 @@ select {{ cursor: pointer; }}
             self._send_html(self._render_page(content, "status"))
 
         def _page_settings(self):
-            saved = "?saved=1" in self.path
-            saved_html = '<div style="background:#1a3a2a;color:#3fb950;padding:10px;border-radius:6px;margin-bottom:16px">✅ Settings saved!</div>' if saved else ""
+            from i18n import available_languages, get_translator
+            t = get_translator(config.language)
 
-            from i18n import available_languages
+            saved = "?saved=1" in self.path
+            saved_html = f'<div style="background:#1a3a2a;color:#3fb950;padding:10px;border-radius:6px;margin-bottom:16px">✅ {t("web_saved")}</div>' if saved else ""
+
             langs = available_languages()
             lang_names = {"en": "English", "de": "Deutsch", "fr": "Français", "es": "Español", "it": "Italiano", "nl": "Nederlands", "pt": "Português", "pl": "Polski", "tr": "Türkçe", "ru": "Русский", "uk": "Українська", "ar": "العربية", "hi": "हिन्दी", "ja": "日本語", "ko": "한국어", "zh": "中文"}
             lang_options = ""
@@ -265,7 +270,7 @@ select {{ cursor: pointer; }}
             content = f"""
 {saved_html}
 <div class="card">
-<h2>⚙️ Settings</h2>
+<h2>⚙️ {t("web_settings")}</h2>
 <form method="POST" action="/settings">
 
 <div class="grid">
@@ -283,27 +288,27 @@ select {{ cursor: pointer; }}
 
 <div class="grid">
 <div>
-<label><input type="checkbox" name="debug" {debug_checked} style="width:auto;margin-right:8px"> 🔍 Debug Mode</label>
+<label><input type="checkbox" name="debug" {debug_checked} style="width:auto;margin-right:8px"> 🔍 {t("web_debug_mode")}</label>
 </div>
 <div>
-<label><input type="checkbox" name="auto_selfupdate" {auto_su_checked} style="width:auto;margin-right:8px"> 🔄 Auto Self-Update</label>
+<label><input type="checkbox" name="auto_selfupdate" {auto_su_checked} style="width:auto;margin-right:8px"> 🔄 {t("web_auto_selfupdate")}</label>
 </div>
 </div>
 
 <div style="margin-top:8px">
-<label>🚫 Excluded Containers</label>
+<label>🚫 {t("web_excluded")}</label>
 <input type="text" value="{', '.join(config.exclude_containers)}" disabled title="Change via EXCLUDE_CONTAINERS env var">
 </div>
 
 <div style="margin-top:16px">
-<button type="submit" class="btn">💾 Save</button>
+<button type="submit" class="btn">💾 {t("web_save")}</button>
 </div>
 
 </form>
 </div>
 
 <div class="card">
-<h2>ℹ️ Info</h2>
+<h2>ℹ️ {t("web_info")}</h2>
 <table>
 <tr><td>Bot Token</td><td><code>{config.bot_token[:8]}...{config.bot_token[-4:]}</code></td></tr>
 <tr><td>Chat ID</td><td><code>{config.chat_id}</code></td></tr>
