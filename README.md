@@ -9,10 +9,14 @@ Monitor your Docker containers for image updates and manage them directly via Te
 ## Features
 
 - **Automatic update detection** — compares local and remote image digests on a configurable schedule
-- **Telegram notifications** — get notified when updates are available, with inline buttons to update or skip
-- **One-click updates** — update all containers directly from Telegram
-- **Bot commands** — check status, trigger manual checks, view pending updates
-- **Lightweight** — built with Python standard library, no extra dependencies
+- **Telegram notifications** — get notified when updates are available
+- **Per-container or bulk updates** — update individual containers or all at once with inline buttons
+- **Self-update** — the bot can update itself via `/selfupdate`
+- **Cleanup** — remove old unused images via `/cleanup`
+- **Debug mode** — toggle detailed diagnostics via `/debug`
+- **Auto-rollback** — failed updates automatically restore the previous container
+- **Works with and without Docker Hub login** — credentials are optional
+- **Lightweight** — Python standard library only, no extra dependencies
 - **Docker-native** — runs as a container, manages containers via Docker socket
 
 ## Quick Start
@@ -33,17 +37,36 @@ Look for `"chat":{"id":YOUR_CHAT_ID}` in the response.
 
 ### 3. Run the container
 
+**Basic (without Docker Hub login):**
+
 ```bash
 docker run -d \
   --name docker-telegram-updater \
   --restart unless-stopped \
   -e BOT_TOKEN=your-bot-token \
   -e CHAT_ID=your-chat-id \
-  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  -v /var/run/docker.sock:/var/run/docker.sock \
   amayer1983/docker-telegram-updater:latest
 ```
 
-### Or use Docker Compose
+**With Docker Hub login (recommended, avoids rate limits):**
+
+```bash
+docker run -d \
+  --name docker-telegram-updater \
+  --restart unless-stopped \
+  -e BOT_TOKEN=your-bot-token \
+  -e CHAT_ID=your-chat-id \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /root/.docker/config.json:/.docker/config.json:ro \
+  amayer1983/docker-telegram-updater:latest
+```
+
+> Run `docker login` on your host first to create the credentials file.
+
+### Or use Docker Compose / Portainer Stack
+
+**Without Docker Hub login:**
 
 ```yaml
 services:
@@ -57,11 +80,22 @@ services:
       - CRON_SCHEDULE=0 18 * * *
       - TZ=Europe/Berlin
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock
       - updater_data:/data
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
   updater_data:
+```
+
+**With Docker Hub login (add this line to volumes):**
+
+```yaml
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - updater_data:/data
+      - /root/.docker/config.json:/.docker/config.json:ro
 ```
 
 ## Telegram Commands
@@ -71,11 +105,31 @@ volumes:
 | `/status` | Show all running containers and their status |
 | `/check` | Manually trigger an update check |
 | `/updates` | Show pending updates |
+| `/cleanup` | Remove old unused Docker images |
+| `/selfupdate` | Update the bot itself to the latest version |
+| `/debug` | Toggle debug mode for detailed diagnostics |
 | `/help` | Show available commands |
 
-When updates are found, you'll receive a message with two buttons:
-- **🚀 Alle updaten** — Pull new images and restart containers via Docker Compose
-- **✋ Manuell** — Dismiss the notification and update manually
+## Update Workflow
+
+When updates are found, you receive a message with buttons for each container:
+
+```
+🔄 Docker Updates verfügbar
+
+• nginx (nginx:latest)
+• redis (redis:7)
+
+[🔄 nginx       ]
+[🔄 redis       ]
+[🚀 Alle updaten] [✋ Manuell]
+```
+
+- **Individual buttons** — update a single container, button changes to ✅ when done
+- **🚀 Alle updaten** — pull and restart all containers at once
+- **✋ Manuell** — dismiss and handle updates yourself
+
+The bot recreates containers with the same configuration (ports, volumes, environment, labels, networks). If an update fails, it automatically rolls back to the previous container.
 
 ## Configuration
 
@@ -96,38 +150,45 @@ When updates are found, you'll receive a message with two buttons:
 | `0 18 * * 1-5` | Weekdays at 18:00 |
 | `*/30 * * * *` | Every 30 minutes |
 
-## How it works
-
-1. On the configured schedule, the checker compares local image digests with remote registry digests
-2. If differences are found, a Telegram notification is sent with inline action buttons
-3. When you press "Update all", the bot pulls new images and restarts containers using `docker compose up -d`
-4. Results are reported back via Telegram
-
-## Requirements
-
-- Docker containers managed with Docker Compose
-- Docker socket access (mounted as volume)
-- A Telegram Bot token and chat ID
-
 ## Docker Hub Rate Limits
 
-Update checks use the registry API and do **not** count against Docker Hub pull limits. However, when pulling updated images, unauthenticated users are limited to 100 pulls per 6 hours.
+| | Update checks | Image pulls |
+|---|---|---|
+| **Without login** | Unlimited (uses registry API) | 100 per 6 hours |
+| **With login** | Unlimited | Unlimited |
 
-To avoid rate limits, mount your Docker credentials into the container:
+Update checks use the registry API and do **not** count against pull limits. For most setups without login, the rate limit is not an issue.
+
+To use authenticated pulls, mount your Docker credentials:
 
 ```yaml
 volumes:
   - /root/.docker/config.json:/.docker/config.json:ro
 ```
 
-If you haven't logged in yet, run `docker login` on your host first.
+If the credentials file doesn't exist, simply leave out this line — the bot works fine without it.
+
+## How it works
+
+1. On the configured schedule, the checker compares local image digests with remote registry digests via the Docker Registry HTTP API
+2. If differences are found, a Telegram notification is sent with inline action buttons for each container
+3. When you press update, the bot pulls the new image, stops the old container, and recreates it with the same configuration
+4. If recreation fails, the old container is automatically restored (rollback)
+5. Results are reported back via Telegram
+
+## What gets skipped
+
+- The bot's own container (use `/selfupdate` instead)
+- Containers running with image IDs instead of tags (locally built images)
+- Containers in the `EXCLUDE_CONTAINERS` list
 
 ## Security
 
-- The container needs read-only access to the Docker socket
+- The Docker socket is required for container management
 - Only the configured `CHAT_ID` can interact with the bot
-- `no-new-privileges` security option is set in the example compose file
+- `no-new-privileges` security option is recommended
 - No external dependencies beyond Python standard library and Docker CLI
+- Docker credentials are mounted read-only
 
 ## License
 
