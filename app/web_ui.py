@@ -240,7 +240,7 @@ select {{ cursor: pointer; }}
 </div>
 
 <div class="card">
-<h2>🐳 {t("web_containers")}</h2>
+<h2>{t("web_containers")}</h2>
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
 <span style="font-size:12px;color:#8b949e">{t("web_containers_running", count=len(containers))}</span>
 <a href="/api/check" class="btn btn-blue" style="text-decoration:none;font-size:13px">{t("web_check_updates")}</a>
@@ -267,7 +267,7 @@ select {{ cursor: pointer; }}
 
             if not history:
                 content = f"""<div class="card">
-<h2>📋 {t("web_history")}</h2>
+<h2>{t("web_history")}</h2>
 <p style="color:#8b949e">{t("web_history_empty")}</p>
 </div>"""
             else:
@@ -282,7 +282,7 @@ select {{ cursor: pointer; }}
 </tr>"""
 
                 content = f"""<div class="card">
-<h2>📋 {t("web_history")}</h2>
+<h2>{t("web_history")}</h2>
 <table>
 <tr><th>{t("web_date")}</th><th>{t("web_name")}</th><th>{t("web_result")}</th><th>{t("web_detail")}</th></tr>
 {rows}
@@ -312,7 +312,7 @@ select {{ cursor: pointer; }}
             content = f"""
 {saved_html}
 <div class="card">
-<h2>{t("web_nav_settings")}</h2>
+<h2>{t("web_settings")}</h2>
 <form method="POST" action="/settings">
 
 <div class="grid">
@@ -350,7 +350,7 @@ select {{ cursor: pointer; }}
 </div>
 
 <div class="card">
-<h2>{t("web_info")}</h2>
+<h2>Info</h2>
 <table>
 <tr><td>Bot Token</td><td><code>{config.bot_token[:8]}...{config.bot_token[-4:]}</code></td></tr>
 <tr><td>Chat ID</td><td><code>{config.chat_id}</code></td></tr>
