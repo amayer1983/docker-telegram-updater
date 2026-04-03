@@ -80,5 +80,14 @@
   "web_history_empty": "Noch keine Updates aufgezeichnet.",
   "web_date": "Datum",
   "web_result": "Ergebnis",
-  "web_detail": "Detail"
+  "web_detail": "Detail",
+  "pin_list": "📌 Gepinnte Container (von Updates ausgeschlossen):",
+  "pin_empty": "📌 Keine gepinnten Container.",
+  "pin_added": "📌 `{name}` gepinnt — wird bei Updates übersprungen.",
+  "pin_already": "📌 `{name}` ist bereits gepinnt.",
+  "unpin_usage": "Verwendung: `/unpin container_name`",
+  "unpin_removed": "📌 `{name}` entpinnt — wird wieder bei Updates berücksichtigt.",
+  "unpin_not_found": "📌 `{name}` ist nicht gepinnt.",
+  "help_pin": "/pin — Container pinnen (Updates überspringen)",
+  "help_unpin": "/unpin — Container entpinnen"
 }

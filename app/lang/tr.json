@@ -80,5 +80,14 @@
   "web_history_empty": "Henüz güncelleme kaydı yok.",
   "web_date": "Tarih",
   "web_result": "Sonuç",
-  "web_detail": "Detay"
+  "web_detail": "Detay",
+  "pin_list": "📌 Sabitlenmiş konteynerler (güncellemelerden hariç):",
+  "pin_empty": "📌 Sabitlenmiş konteyner yok.",
+  "pin_added": "📌 `{name}` sabitlendi — güncellemelerde atlanacak.",
+  "pin_already": "📌 `{name}` zaten sabitlenmiş.",
+  "unpin_usage": "Kullanım: `/unpin konteyner_adı`",
+  "unpin_removed": "📌 `{name}` sabitlemesi kaldırıldı.",
+  "unpin_not_found": "📌 `{name}` sabitlenmemiş.",
+  "help_pin": "/pin — Konteyner sabitle",
+  "help_unpin": "/unpin — Sabitlemeyi kaldır"
 }

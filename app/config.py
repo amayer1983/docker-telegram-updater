@@ -13,6 +13,7 @@ class Config:
         self.data_dir = data_dir
         self.pending_file = os.path.join(data_dir, "pending_updates.json")
         self.history_file = os.path.join(data_dir, "update_history.json")
+        self.pinned_file = os.path.join(data_dir, "pinned_containers.json")
         self.debug = False
         self.auto_selfupdate = auto_selfupdate
         self.language = language

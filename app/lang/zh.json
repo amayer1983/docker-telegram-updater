@@ -80,5 +80,14 @@
   "web_history_empty": "暂无更新记录。",
   "web_date": "日期",
   "web_result": "结果",
-  "web_detail": "详情"
+  "web_detail": "详情",
+  "pin_list": "📌 已固定的容器（排除更新）：",
+  "pin_empty": "📌 没有固定的容器。",
+  "pin_added": "📌 `{name}` 已固定 — 更新时将跳过。",
+  "pin_already": "📌 `{name}` 已经固定。",
+  "unpin_usage": "用法：`/unpin 容器名`",
+  "unpin_removed": "📌 `{name}` 已取消固定。",
+  "unpin_not_found": "📌 `{name}` 未固定。",
+  "help_pin": "/pin — 固定容器",
+  "help_unpin": "/unpin — 取消固定"
 }

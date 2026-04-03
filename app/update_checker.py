@@ -50,10 +50,13 @@ class UpdateChecker:
             if re.match(r'^[0-9a-f]{12,}$', image):
                 self._debug(f"  Skipped (image ID): {name} ({image})")
                 continue
-            if name not in self.config.exclude_containers:
-                containers.append({"name": name, "image": image})
-            else:
+            if name in self.config.exclude_containers:
                 self._debug(f"  Skipped (excluded): {name}")
+                continue
+            if name in self._get_pinned():
+                self._debug(f"  Skipped (pinned): {name}")
+                continue
+            containers.append({"name": name, "image": image})
         return containers
 
     def _parse_image(self, image):
@@ -181,6 +184,16 @@ class UpdateChecker:
             created = result.stdout.strip()[:10]  # Just the date part
             return created
         return "?"
+
+    def _get_pinned(self):
+        """Get list of pinned (frozen) container names."""
+        if os.path.exists(self.config.pinned_file):
+            try:
+                with open(self.config.pinned_file) as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                pass
+        return []
 
     def _save_history(self, name, image, success, detail=""):
         """Append an entry to the update history file."""

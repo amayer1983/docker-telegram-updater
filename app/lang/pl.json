@@ -80,5 +80,14 @@
   "web_history_empty": "Brak zarejestrowanych aktualizacji.",
   "web_date": "Data",
   "web_result": "Wynik",
-  "web_detail": "Szczegóły"
+  "web_detail": "Szczegóły",
+  "pin_list": "📌 Przypięte kontenery (wykluczone z aktualizacji):",
+  "pin_empty": "📌 Brak przypiętych kontenerów.",
+  "pin_added": "📌 `{name}` przypięty — zostanie pominięty przy aktualizacji.",
+  "pin_already": "📌 `{name}` jest już przypięty.",
+  "unpin_usage": "Użycie: `/unpin nazwa_kontenera`",
+  "unpin_removed": "📌 `{name}` odpięty — będzie uwzględniany w aktualizacjach.",
+  "unpin_not_found": "📌 `{name}` nie jest przypięty.",
+  "help_pin": "/pin — Przypnij kontener",
+  "help_unpin": "/unpin — Odepnij kontener"
 }

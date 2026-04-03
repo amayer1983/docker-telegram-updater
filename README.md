@@ -109,6 +109,8 @@ volumes:
 | `/updates` | Show pending updates |
 | `/cleanup` | Remove old unused Docker images |
 | `/history` | Show update history (last 10 entries) |
+| `/pin <name>` | Pin a container (skip updates). Without name: show pinned list |
+| `/unpin <name>` | Unpin a container (include in updates again) |
 | `/selfupdate` | Update the bot itself to the latest version |
 | `/debug` | Toggle debug mode for detailed diagnostics |
 | `/lang` | Switch language (e.g. `/lang en`, `/lang de`) |

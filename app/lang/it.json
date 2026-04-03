@@ -80,5 +80,14 @@
   "web_history_empty": "Nessun aggiornamento registrato.",
   "web_date": "Data",
   "web_result": "Risultato",
-  "web_detail": "Dettaglio"
+  "web_detail": "Dettaglio",
+  "pin_list": "📌 Contenitori bloccati (esclusi dagli aggiornamenti):",
+  "pin_empty": "📌 Nessun contenitore bloccato.",
+  "pin_added": "📌 `{name}` bloccato — verrà saltato durante gli aggiornamenti.",
+  "pin_already": "📌 `{name}` è già bloccato.",
+  "unpin_usage": "Uso: `/unpin nome_contenitore`",
+  "unpin_removed": "📌 `{name}` sbloccato — sarà incluso negli aggiornamenti.",
+  "unpin_not_found": "📌 `{name}` non è bloccato.",
+  "help_pin": "/pin — Blocca contenitore",
+  "help_unpin": "/unpin — Sblocca contenitore"
 }

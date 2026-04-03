@@ -80,5 +80,14 @@
   "web_history_empty": "No hay actualizaciones registradas.",
   "web_date": "Fecha",
   "web_result": "Resultado",
-  "web_detail": "Detalle"
+  "web_detail": "Detalle",
+  "pin_list": "📌 Contenedores fijados (excluidos de actualizaciones):",
+  "pin_empty": "📌 No hay contenedores fijados.",
+  "pin_added": "📌 `{name}` fijado — se omitirá en las actualizaciones.",
+  "pin_already": "📌 `{name}` ya está fijado.",
+  "unpin_usage": "Uso: `/unpin nombre_contenedor`",
+  "unpin_removed": "📌 `{name}` desfijado — se incluirá en las actualizaciones.",
+  "unpin_not_found": "📌 `{name}` no está fijado.",
+  "help_pin": "/pin — Fijar contenedor",
+  "help_unpin": "/unpin — Desfijar contenedor"
 }

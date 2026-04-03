@@ -80,5 +80,14 @@
   "web_history_empty": "لا توجد تحديثات مسجلة.",
   "web_date": "التاريخ",
   "web_result": "النتيجة",
-  "web_detail": "التفاصيل"
+  "web_detail": "التفاصيل",
+  "pin_list": "📌 الحاويات المثبتة (مستبعدة من التحديثات):",
+  "pin_empty": "📌 لا توجد حاويات مثبتة.",
+  "pin_added": "📌 تم تثبيت `{name}` — سيتم تخطيه عند التحديث.",
+  "pin_already": "📌 `{name}` مثبت بالفعل.",
+  "unpin_usage": "الاستخدام: `/unpin اسم_الحاوية`",
+  "unpin_removed": "📌 تم إلغاء تثبيت `{name}`.",
+  "unpin_not_found": "📌 `{name}` غير مثبت.",
+  "help_pin": "/pin — تثبيت حاوية",
+  "help_unpin": "/unpin — إلغاء تثبيت حاوية"
 }

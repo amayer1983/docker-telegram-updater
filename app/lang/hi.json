@@ -80,5 +80,14 @@
   "web_history_empty": "अभी तक कोई अपडेट दर्ज नहीं।",
   "web_date": "तारीख",
   "web_result": "परिणाम",
-  "web_detail": "विवरण"
+  "web_detail": "विवरण",
+  "pin_list": "📌 पिन किए गए कंटेनर (अपडेट से बाहर):",
+  "pin_empty": "📌 कोई पिन किया गया कंटेनर नहीं।",
+  "pin_added": "📌 `{name}` पिन किया — अपडेट में छोड़ दिया जाएगा।",
+  "pin_already": "📌 `{name}` पहले से पिन है।",
+  "unpin_usage": "उपयोग: `/unpin कंटेनर_नाम`",
+  "unpin_removed": "📌 `{name}` अनपिन किया — फिर से अपडेट होगा।",
+  "unpin_not_found": "📌 `{name}` पिन नहीं है।",
+  "help_pin": "/pin — कंटेनर पिन करें",
+  "help_unpin": "/unpin — कंटेनर अनपिन करें"
 }

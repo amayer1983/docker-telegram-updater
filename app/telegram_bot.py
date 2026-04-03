@@ -21,6 +21,19 @@ class TelegramBot:
     def stop(self):
         self.running = False
 
+    def _get_pinned(self):
+        if os.path.exists(self.config.pinned_file):
+            try:
+                with open(self.config.pinned_file) as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                pass
+        return []
+
+    def _save_pinned(self, pinned):
+        with open(self.config.pinned_file, "w") as f:
+            json.dump(pinned, f)
+
     def api_call(self, method, data=None):
         url = f"https://api.telegram.org/bot{self.config.bot_token}/{method}"
         if data:
@@ -541,6 +554,40 @@ class TelegramBot:
                     return
             self.send_message(self.t("history_empty"))
 
+        elif text.startswith("/pin"):
+            parts = text.split()
+            if len(parts) < 2:
+                # Show pinned list
+                pinned = self._get_pinned()
+                if pinned:
+                    names = [f"• `{n}`" for n in pinned]
+                    self.send_message(self.t("pin_list") + "\n" + "\n".join(names))
+                else:
+                    self.send_message(self.t("pin_empty"))
+                return
+            name = parts[1]
+            pinned = self._get_pinned()
+            if name not in pinned:
+                pinned.append(name)
+                self._save_pinned(pinned)
+                self.send_message(self.t("pin_added", name=name))
+            else:
+                self.send_message(self.t("pin_already", name=name))
+
+        elif text.startswith("/unpin"):
+            parts = text.split()
+            if len(parts) < 2:
+                self.send_message(self.t("unpin_usage"))
+                return
+            name = parts[1]
+            pinned = self._get_pinned()
+            if name in pinned:
+                pinned.remove(name)
+                self._save_pinned(pinned)
+                self.send_message(self.t("unpin_removed", name=name))
+            else:
+                self.send_message(self.t("unpin_not_found", name=name))
+
         elif text == "/settings":
             debug_status = self.t("debug_on") if self.config.debug else self.t("debug_off")
             auto_su = "ON ✅" if self.config.auto_selfupdate else "OFF"
@@ -550,7 +597,8 @@ class TelegramBot:
                 + f"🌍 {self.t('settings_language')}: `{self.config.language}`\n"
                 + f"🔄 Auto-Selfupdate: {auto_su}\n"
                 + f"🔍 Debug: {debug_status}\n"
-                + f"🚫 Exclude: `{', '.join(self.config.exclude_containers) or '-'}`"
+                + f"🚫 Exclude: `{', '.join(self.config.exclude_containers) or '-'}`\n"
+                + f"📌 Pinned: `{', '.join(self._get_pinned()) or '-'}`"
             )
 
         elif text == "/help" or text == "/start":
@@ -562,6 +610,8 @@ class TelegramBot:
                 + self.t("help_updates") + "\n"
                 + self.t("help_cleanup") + "\n"
                 + self.t("help_history") + "\n"
+                + self.t("help_pin") + "\n"
+                + self.t("help_unpin") + "\n"
                 + self.t("help_selfupdate") + "\n"
                 + self.t("help_debug") + "\n"
                 + self.t("help_lang") + "\n"

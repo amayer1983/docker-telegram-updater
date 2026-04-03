@@ -80,5 +80,14 @@
   "web_history_empty": "Aucune mise à jour enregistrée.",
   "web_date": "Date",
   "web_result": "Résultat",
-  "web_detail": "Détail"
+  "web_detail": "Détail",
+  "pin_list": "📌 Conteneurs épinglés (exclus des mises à jour) :",
+  "pin_empty": "📌 Aucun conteneur épinglé.",
+  "pin_added": "📌 `{name}` épinglé — sera ignoré lors des mises à jour.",
+  "pin_already": "📌 `{name}` est déjà épinglé.",
+  "unpin_usage": "Utilisation : `/unpin nom_conteneur`",
+  "unpin_removed": "📌 `{name}` désépinglé — sera inclus dans les mises à jour.",
+  "unpin_not_found": "📌 `{name}` n'est pas épinglé.",
+  "help_pin": "/pin — Épingler un conteneur",
+  "help_unpin": "/unpin — Désépingler un conteneur"
 }

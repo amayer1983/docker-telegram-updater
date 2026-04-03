@@ -80,5 +80,14 @@
   "web_history_empty": "아직 업데이트 기록이 없습니다.",
   "web_date": "날짜",
   "web_result": "결과",
-  "web_detail": "상세"
+  "web_detail": "상세",
+  "pin_list": "📌 고정된 컨테이너 (업데이트 제외):",
+  "pin_empty": "📌 고정된 컨테이너가 없습니다.",
+  "pin_added": "📌 `{name}` 고정됨 — 업데이트 시 건너뜁니다.",
+  "pin_already": "📌 `{name}`은(는) 이미 고정되어 있습니다.",
+  "unpin_usage": "사용법: `/unpin 컨테이너_이름`",
+  "unpin_removed": "📌 `{name}` 고정 해제됨.",
+  "unpin_not_found": "📌 `{name}`은(는) 고정되어 있지 않습니다.",
+  "help_pin": "/pin — 컨테이너 고정",
+  "help_unpin": "/unpin — 고정 해제"
 }

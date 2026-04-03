@@ -80,5 +80,14 @@
   "web_history_empty": "まだ更新記録がありません。",
   "web_date": "日付",
   "web_result": "結果",
-  "web_detail": "詳細"
+  "web_detail": "詳細",
+  "pin_list": "📌 固定されたコンテナ（更新対象外）:",
+  "pin_empty": "📌 固定されたコンテナはありません。",
+  "pin_added": "📌 `{name}` を固定しました — 更新時にスキップされます。",
+  "pin_already": "📌 `{name}` は既に固定されています。",
+  "unpin_usage": "使い方: `/unpin コンテナ名`",
+  "unpin_removed": "📌 `{name}` の固定を解除しました。",
+  "unpin_not_found": "📌 `{name}` は固定されていません。",
+  "help_pin": "/pin — コンテナを固定",
+  "help_unpin": "/unpin — 固定を解除"
 }

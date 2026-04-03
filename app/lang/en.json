@@ -80,5 +80,14 @@
   "web_history_empty": "No updates recorded yet.",
   "web_date": "Date",
   "web_result": "Result",
-  "web_detail": "Detail"
+  "web_detail": "Detail",
+  "pin_list": "📌 Pinned containers (excluded from updates):",
+  "pin_empty": "📌 No pinned containers.",
+  "pin_added": "📌 `{name}` pinned — will be skipped during updates.",
+  "pin_already": "📌 `{name}` is already pinned.",
+  "unpin_usage": "Usage: `/unpin container_name`",
+  "unpin_removed": "📌 `{name}` unpinned — will be included in updates again.",
+  "unpin_not_found": "📌 `{name}` is not pinned.",
+  "help_pin": "/pin — Pin container (skip updates)",
+  "help_unpin": "/unpin — Unpin container"
 }
