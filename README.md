@@ -136,7 +136,7 @@ When updates are found, you receive a message with image sizes, dates, and butto
 - **🚀 Update all** — pull and restart all containers at once
 - **✋ Manual** — dismiss and handle updates yourself
 
-The bot recreates containers with the same configuration (ports, volumes, environment, labels, networks). If an update fails, it automatically rolls back to the previous container.
+The bot recreates containers with the same configuration (ports, volumes, environment, labels, networks). After recreation, a health check verifies the container is running (and healthy, if a Docker HEALTHCHECK is defined). If the update or health check fails, it automatically rolls back to the previous container.
 
 ## Configuration
 

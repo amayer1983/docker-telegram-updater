@@ -4,6 +4,7 @@
 import json
 import os
 import subprocess
+import time
 import urllib.request
 import urllib.parse
 import re
@@ -407,9 +408,48 @@ class UpdateChecker:
                 self._save_history(name, image, False, msg)
                 return False, msg
 
+            # Health check: wait up to 30s for container to be running
+            self._debug(f"  Health check: waiting for {name}...")
+            healthy = False
+            for i in range(6):
+                time.sleep(5)
+                hc = subprocess.run(
+                    ["docker", "inspect", "--format", "{{.State.Status}}||{{.State.Health.Status}}", name],
+                    capture_output=True, text=True
+                )
+                output = hc.stdout.strip()
+                state, _, health = output.partition("||")
+                self._debug(f"  Health check [{i+1}/6]: state={state}, health={health}")
+
+                if state != "running":
+                    # Container crashed
+                    break
+
+                if health == "" or health == "<no value>":
+                    # No healthcheck defined — running is good enough
+                    healthy = True
+                    break
+                elif health == "healthy":
+                    healthy = True
+                    break
+                elif health == "unhealthy":
+                    break
+                # "starting" → continue waiting
+
+            if not healthy:
+                self._debug(f"  Health check FAILED for {name} — rolling back")
+                # Stop failed container, restore old one
+                subprocess.run(["docker", "stop", name], capture_output=True, timeout=30)
+                subprocess.run(["docker", "rm", name], capture_output=True, timeout=10)
+                subprocess.run(["docker", "rename", old_name, name], capture_output=True, timeout=10)
+                subprocess.run(["docker", "start", name], capture_output=True, timeout=60)
+                msg = f"Health check failed (state={state}, health={health}) — rolled back"
+                self._save_history(name, image, False, msg)
+                return False, msg
+
             # Remove old container
             subprocess.run(["docker", "rm", old_name], capture_output=True, timeout=30)
-            self._debug(f"  Recreated successfully: {name}")
+            self._debug(f"  Recreated successfully: {name} (health: {health or 'ok'})")
 
             detail = f"📅 {old_created} → {new_created}, 📦 {new_size}"
             self._save_history(name, image, True, detail)
